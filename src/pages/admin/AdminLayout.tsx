@@ -1,14 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
+import { FolderTree, LayoutDashboard, LogOut, Settings, UtensilsCrossed } from "lucide-react";
 import { NavLink, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../../features/admin/auth-context";
 import { useLanguage } from "../../i18n/language";
 import { supabase } from "../../lib/supabase";
 
 const links = [
-  { to: "/admin", end: true, key: "dashboard" },
-  { to: "/admin/items", end: false, key: "dishes" },
-  { to: "/admin/categories", end: false, key: "categories" },
-  { to: "/admin/settings", end: false, key: "settings" },
+  { to: "/admin", end: true, key: "dashboard", icon: LayoutDashboard },
+  { to: "/admin/items", end: false, key: "dishes", icon: UtensilsCrossed },
+  { to: "/admin/categories", end: false, key: "categories", icon: FolderTree },
+  { to: "/admin/settings", end: false, key: "settings", icon: Settings },
 ] as const;
 
 export function AdminLayout() {
@@ -51,29 +52,34 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="min-h-dvh bg-ivory md:grid md:grid-cols-[15rem_1fr]">
-      <aside className="hidden border-r border-line bg-wine text-ivory md:flex md:flex-col">
-        <div className="px-5 py-6">
-          <p className="font-serif text-2xl tracking-[0.14em]">MARHABA</p>
-          <p className="mt-1 text-xs tracking-[0.18em] text-gold-bright">{t.adminTitle}</p>
+    <div className="min-h-dvh bg-ivory md:grid md:grid-cols-[16rem_1fr]">
+      <aside className="m-3 hidden flex-col rounded-xl border border-line bg-paper p-4 shadow-[var(--shadow-soft)] md:flex">
+        <div className="px-2 py-3">
+          <p className="font-serif text-2xl tracking-[0.12em] text-ink">MARHABA</p>
+          <p className="text-xs tracking-[0.16em] text-muted">HOTEL & SPA</p>
         </div>
-        <nav className="flex flex-1 flex-col gap-1 px-3">
+        <nav className="mt-4 flex flex-1 flex-col gap-1">
           {links.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
               end={link.end}
               className={({ isActive }) =>
-                `flex h-11 items-center px-3 text-sm ${isActive ? "bg-ivory text-wine" : "text-ivory/85 hover:bg-white/10"}`
+                `flex h-11 items-center gap-3 rounded-md px-3 text-sm ${isActive ? "bg-burgundy/10 font-medium text-burgundy" : "text-muted hover:bg-ivory hover:text-ink"}`
               }
             >
+              <link.icon size={18} />
               {t[link.key]}
             </NavLink>
           ))}
         </nav>
-        <button type="button" onClick={() => void supabase?.auth.signOut()} className="m-3 h-11 border border-white/20 text-sm">
-          {t.logout}
-        </button>
+        <div className="mt-4 border-t border-line pt-3">
+          <p className="truncate px-2 text-xs text-muted">{session.user.email}</p>
+          <button type="button" onClick={() => void supabase?.auth.signOut()} className="mt-2 flex h-11 w-full items-center gap-2 rounded-md px-3 text-sm text-burgundy hover:bg-burgundy/5">
+            <LogOut size={16} />
+            {t.logout}
+          </button>
+        </div>
       </aside>
       <div className="min-w-0">
         <header className="flex items-center justify-between border-b border-line bg-paper px-4 py-[max(0.75rem,env(safe-area-inset-top))] md:hidden">
@@ -86,18 +92,17 @@ export function AdminLayout() {
           <Outlet />
         </div>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-paper pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-xl border border-line bg-paper p-1 shadow-[var(--shadow-soft)] md:hidden">
         {links.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
             end={link.end}
             className={({ isActive }) =>
-              `flex h-14 items-center justify-center px-1 text-center text-[11px] leading-tight ${
-                isActive ? "text-burgundy" : "text-muted"
-              }`
+              `flex h-14 flex-col items-center justify-center gap-1 rounded-md text-[11px] ${isActive ? "bg-burgundy/10 text-burgundy" : "text-muted"}`
             }
           >
+            <link.icon size={18} />
             {t[link.key]}
           </NavLink>
         ))}

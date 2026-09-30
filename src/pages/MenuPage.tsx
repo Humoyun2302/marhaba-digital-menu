@@ -83,41 +83,32 @@ export function MenuPage() {
       >
         {t.skip}
       </a>
-      <div ref={stickyRef} className="sticky top-0 z-30">
-        <MenuHeader logoUrl={settingsQuery.data?.logo_url} />
-        <div className="border-b border-line bg-ivory/95">
-          <div className="mx-auto max-w-3xl px-4 py-2.5 sm:px-6">
-            <label className="relative block">
-              <span className="sr-only">{t.searchLabel}</span>
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={t.searchPlaceholder}
-                enterKeyHint="search"
-                className="h-11 w-full border border-line bg-paper px-3 pr-12 text-base text-ink placeholder:text-muted"
-              />
-              {query ? (
-                <button
-                  type="button"
-                  aria-label={t.clearSearch}
-                  onClick={() => setQuery("")}
-                  className="absolute top-0 right-0 grid h-11 w-11 place-items-center text-burgundy"
-                >
-                  ×
-                </button>
-              ) : null}
-            </label>
-          </div>
+      <div ref={stickyRef} className="sticky top-0 z-30 bg-ivory/90 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur-md sm:px-6">
+        <div className="mx-auto flex max-w-3xl flex-col gap-3">
+          <MenuHeader logoUrl={settingsQuery.data?.logo_url} />
+          <label className="relative block">
+            <span className="sr-only">{t.searchLabel}</span>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t.searchPlaceholder}
+              enterKeyHint="search"
+              className="h-12 w-full rounded-full border border-line bg-paper px-5 pr-12 text-base text-ink shadow-[var(--shadow-soft)] placeholder:text-muted"
+            />
+            {query ? (
+              <button type="button" aria-label={t.clearSearch} onClick={() => setQuery("")} className="absolute top-0 right-1 grid h-12 w-12 place-items-center text-burgundy">
+                ×
+              </button>
+            ) : null}
+          </label>
+          {!menuQuery.isLoading && !loadError ? <CategoryNav categories={visible} activeId={resolvedActiveId} onSelect={selectCategory} /> : null}
         </div>
-        {!menuQuery.isLoading && !loadError ? (
-          <CategoryNav categories={visible} activeId={resolvedActiveId} onSelect={selectCategory} />
-        ) : null}
       </div>
 
       <main id="menu-content" className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
         {menuQuery.isLoading ? <MenuSkeleton /> : null}
         {loadError ? (
-          <div className="border border-line bg-paper px-5 py-8 text-center">
+          <div className="rounded-xl border border-line bg-paper px-5 py-8 text-center shadow-[var(--shadow-soft)]">
             <p className="font-serif text-3xl text-wine">{t.loadError}</p>
             <p className="mt-2 text-sm text-muted">{t.loadErrorHint}</p>
             {import.meta.env.DEV ? <p className="mt-3 text-xs text-muted">{errorText(loadError)}</p> : null}
@@ -127,7 +118,7 @@ export function MenuPage() {
                 void menuQuery.refetch();
                 void settingsQuery.refetch();
               }}
-              className="mt-5 h-11 bg-burgundy px-5 text-sm text-ivory"
+              className="mt-5 h-11 rounded-md bg-burgundy px-5 text-sm text-ivory"
             >
               {t.retry}
             </button>
@@ -147,11 +138,11 @@ export function MenuPage() {
         ) : null}
         {visible.map((category) => (
           <section key={category.id} id={`category-${category.id}`} className="menu-section pt-8 first:pt-2">
-            <h2 className="font-serif text-[2rem] leading-none text-wine">
-              {localizedName(lang, category.name_ru, category.name_en)}
-            </h2>
-            <Flourish className="mt-3 mb-1 h-4 w-36 text-burgundy/80" />
-            <div>
+            <div className="mb-3 flex items-end justify-between gap-3">
+              <h2 className="font-serif text-4xl leading-none text-wine">{localizedName(lang, category.name_ru, category.name_en)}</h2>
+              <p className="text-sm text-muted">{category.menu_items.length}</p>
+            </div>
+            <div className="space-y-3">
               {category.menu_items.map((item) => (
                 <MenuItemRow key={item.id} item={item} onOpen={setOpenItem} />
               ))}
@@ -183,12 +174,9 @@ function filterMenu(categories: Category[], query: string, lang: "ru" | "en"): C
 function MenuSkeleton() {
   return (
     <div className="space-y-4" aria-hidden="true">
-      <div className="h-8 w-40 bg-burgundy/10" />
-      {Array.from({ length: 6 }, (_, index) => (
-        <div key={index} className="flex items-center justify-between gap-4 border-b border-line py-4">
-          <div className="h-4 w-2/3 bg-burgundy/10" />
-          <div className="h-4 w-16 bg-burgundy/10" />
-        </div>
+        <div className="h-10 w-40 rounded-md bg-burgundy/10" />
+      {Array.from({ length: 5 }, (_, index) => (
+        <div key={index} className="h-20 rounded-lg bg-paper" />
       ))}
     </div>
   );

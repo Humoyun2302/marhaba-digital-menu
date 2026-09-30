@@ -23,6 +23,7 @@ export function ItemsPage() {
     await queryClient.invalidateQueries({ queryKey: ["admin-menu"] });
     await queryClient.invalidateQueries({ queryKey: ["public-menu"] });
     await queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
+    await queryClient.invalidateQueries({ queryKey: ["admin-activity"] });
   };
 
   const saveMutation = useMutation({
@@ -96,7 +97,7 @@ export function ItemsPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-serif text-4xl text-wine">{t.dishes}</h1>
-        <button type="button" onClick={() => setEditing("new")} className="h-11 bg-burgundy px-4 text-sm text-ivory">
+        <button type="button" onClick={() => setEditing("new")} className="h-11 rounded-md bg-burgundy px-4 text-sm text-ivory">
           {t.addDish}
         </button>
       </div>
@@ -138,7 +139,7 @@ export function ItemsPage() {
       {!menu.isLoading && items.length === 0 ? <p className="mt-6 text-muted">{t.noDishes}</p> : null}
       <ul className="mt-4 space-y-2">
         {items.map(({ item, category }, index) => (
-          <li key={item.id} className="border border-line bg-paper p-3">
+          <li key={item.id} className="rounded-lg border border-line bg-paper p-4 shadow-[var(--shadow-soft)]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-medium">{localizedName(lang, item.name_ru, item.name_en)}</p>

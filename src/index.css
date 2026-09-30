@@ -3,15 +3,20 @@
 @theme {
   --font-serif: "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, serif;
   --font-sans: Manrope, "Segoe UI", sans-serif;
-  --color-ivory: #f6f1e8;
-  --color-paper: #fffdf8;
+  --color-ivory: #f4efe6;
+  --color-paper: #fffdf9;
   --color-burgundy: #721f2a;
   --color-wine: #4d1118;
   --color-gold: #c6a15b;
   --color-gold-bright: #d7b46a;
-  --color-ink: #181716;
-  --color-muted: #706a63;
-  --color-line: rgba(77, 17, 24, 0.12);
+  --color-ink: #1c1917;
+  --color-muted: #746c64;
+  --color-line: rgba(77, 17, 24, 0.1);
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --shadow-soft: 0 10px 30px rgba(77, 17, 24, 0.05);
 }
 
 html {
@@ -51,7 +56,24 @@ body::before {
 
 :focus-visible {
   outline: 2px solid #721f2a;
-  outline-offset: 2px;
+  outline-offset: 3px;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    transform 150ms ease,
+    box-shadow 180ms ease;
+}
+
+button:active {
+  transform: scale(0.98);
 }
 
 .menu-section {

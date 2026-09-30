@@ -65,7 +65,7 @@ export function Dialog({ open, title, closeLabel, onClose, children, wide = fals
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`relative max-h-[min(92dvh,900px)] w-full overflow-y-auto bg-paper shadow-xl ${
+        className={`relative max-h-[min(92dvh,900px)] w-full overflow-y-auto rounded-t-xl bg-paper shadow-xl sm:rounded-xl ${
           wide ? "sm:max-w-xl" : "sm:max-w-md"
         }`}
       >

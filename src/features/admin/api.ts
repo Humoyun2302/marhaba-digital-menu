@@ -73,6 +73,7 @@ export async function saveItem(id: string | null, draft: ItemDraft): Promise<voi
       : await client.from("item_price_options").insert(row);
     if (result.error) throw new Error(result.error.message);
   }
+  await logActivity(id ? "updated" : "created", "menu_item", itemId, payload.name_en || payload.name_ru);
 }
 
 export async function deleteItem(item: MenuItem): Promise<void> {
@@ -80,12 +81,14 @@ export async function deleteItem(item: MenuItem): Promise<void> {
   const { error } = await client.from("menu_items").delete().eq("id", item.id);
   if (error) throw new Error(error.message);
   await removeImage(item.image_url, "menu-images");
+  await logActivity("deleted", "menu_item", item.id, item.name_en || item.name_ru);
 }
 
 export async function setItemAvailability(id: string, isAvailable: boolean): Promise<void> {
   const client = requireSupabase();
   const { error } = await client.from("menu_items").update({ is_available: isAvailable }).eq("id", id);
   if (error) throw new Error(error.message);
+  await logActivity(isAvailable ? "restored" : "hidden", "menu_item", id, id);
 }
 
 export async function duplicateItem(item: MenuItem, suffix: string): Promise<void> {
@@ -112,6 +115,7 @@ export async function saveOrder(table: "categories" | "menu_items", ids: string[
   const results = await Promise.all(ids.map((id, index) => client.from(table).update({ sort_order: index }).eq("id", id)));
   const failed = results.find((result) => result.error);
   if (failed?.error) throw new Error(failed.error.message);
+  await logActivity("reordered", table === "categories" ? "category" : "menu_item", null, table);
 }
 
 export async function saveCategory(
@@ -129,10 +133,12 @@ export async function saveCategory(
   if (id) {
     const { error } = await client.from("categories").update(payload).eq("id", id);
     if (error) throw new Error(error.message);
+    await logActivity("updated", "category", id, payload.name_en || payload.name_ru);
     return;
   }
   const { error } = await client.from("categories").insert({ ...payload, slug, sort_order: sortOrder });
   if (error) throw new Error(error.message);
+  await logActivity("created", "category", null, payload.name_en || payload.name_ru);
 }
 
 export async function deleteCategory(id: string, reassignTo: string | null): Promise<void> {
@@ -143,6 +149,7 @@ export async function deleteCategory(id: string, reassignTo: string | null): Pro
   }
   const { error } = await client.from("categories").delete().eq("id", id);
   if (error) throw new Error(error.message);
+  await logActivity("deleted", "category", id, id);
 }
 
 export async function setCategoryActive(id: string, isActive: boolean): Promise<void> {
@@ -208,6 +215,46 @@ export async function fetchDashboard(): Promise<{
     categories: categories.count ?? 0,
     recent: (recent.data ?? []) as RecentDish[],
   };
+}
+
+export type ActivityEntry = {
+  id: string;
+  action: string;
+  entity_type: string;
+  entity_name: string;
+  created_at: string;
+};
+
+export async function logActivity(
+  action: string,
+  entityType: string,
+  entityId: string | null,
+  entityName: string,
+): Promise<void> {
+  try {
+    const client = requireSupabase();
+    const { data } = await client.auth.getUser();
+    await client.from("admin_activity").insert({
+      admin_user_id: data.user?.id ?? null,
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      entity_name: entityName,
+    });
+  } catch {
+    /* activity logging must not block menu edits */
+  }
+}
+
+export async function fetchActivity(): Promise<ActivityEntry[]> {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from("admin_activity")
+    .select("id, action, entity_type, entity_name, created_at")
+    .order("created_at", { ascending: false })
+    .limit(8);
+  if (error) return [];
+  return (data ?? []) as ActivityEntry[];
 }
 
 export async function removeImage(url: string | null, bucket: "menu-images" | "branding"): Promise<void> {

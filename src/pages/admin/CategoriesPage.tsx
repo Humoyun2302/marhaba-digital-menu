@@ -55,6 +55,7 @@ export function CategoriesPage() {
     await queryClient.invalidateQueries({ queryKey: ["admin-menu"] });
     await queryClient.invalidateQueries({ queryKey: ["public-menu"] });
     await queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
+    await queryClient.invalidateQueries({ queryKey: ["admin-activity"] });
   }
 
   const orderMutation = useMutation({
