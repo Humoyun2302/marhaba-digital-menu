@@ -38,7 +38,10 @@ export function AdminLoginPage() {
     if (!supabase) return;
     setSubmitting(true);
     setError("");
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: adminEmail(email),
+      password,
+    });
     setSubmitting(false);
     if (signInError) {
       const message = errorText(signInError).toLowerCase();
@@ -67,7 +70,7 @@ export function AdminLoginPage() {
           </div>
         ) : (
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
-            <Field label={t.email} type="email" value={email} autoComplete="username" onChange={setEmail} />
+            <Field label={t.email} type="text" value={email} autoComplete="username" onChange={setEmail} />
             <Field label={t.password} type="password" value={password} autoComplete="current-password" onChange={setPassword} />
             {error ? <p className="text-sm text-burgundy">{error}</p> : null}
             <button
@@ -85,6 +88,12 @@ export function AdminLoginPage() {
       </div>
     </div>
   );
+}
+
+function adminEmail(login: string): string {
+  const value = login.trim().toLowerCase();
+  if (value.includes("@")) return value;
+  return "marhaba.admin@gmail.com";
 }
 
 function Field({
