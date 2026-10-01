@@ -6,13 +6,12 @@ export function MenuHeader({ logoUrl }: { logoUrl?: string | null }) {
   const { lang, setLang, t } = useLanguage();
 
   return (
-    <header className="rounded-xl border border-line bg-paper px-4 py-4 shadow-[var(--shadow-soft)] sm:px-5">
+    <header className="rounded-[20px] border border-line bg-paper px-3 py-2 shadow-[var(--shadow-soft)] sm:px-4">
       <div className="flex items-center gap-3">
         <a href="#top" aria-label={t.homeLabel} className="min-w-0 rounded-md">
           <Logo variant="header" logoUrl={logoUrl} />
         </a>
-        <p className="ml-auto font-serif text-sm tracking-[0.22em] text-burgundy">{t.menuLabel}</p>
-        <div role="group" aria-label={t.language} className="flex rounded-full bg-ivory p-1">
+        <div role="group" aria-label={t.language} className="ml-auto flex rounded-full bg-ivory p-1">
           <LangButton current={lang} value="ru" label="RU" onSelect={setLang} />
           <LangButton current={lang} value="en" label="EN" onSelect={setLang} />
         </div>

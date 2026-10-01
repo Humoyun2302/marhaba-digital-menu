@@ -1,25 +1,53 @@
+import { fetchMenuCategories } from "../menu/api";
 import { requireSupabase } from "../../lib/supabase";
 import type { Category, CategoryDraft, ItemDraft, MenuItem, SettingsDraft, SiteSettings } from "../../types/menu";
 import { blankToNull, storagePath } from "../../utils/format";
 
+const EXTRA_COLUMNS = [
+  "serving_ru",
+  "serving_en",
+  "image_thumb_url",
+  "image_source",
+  "image_license",
+  "image_attribution",
+  "image_review_status",
+  "image_hidden",
+] as const;
+
 export async function fetchAdminMenu(): Promise<Category[]> {
+  return fetchMenuCategories({ activeOnly: false, availableOnly: false });
+}
+
+function needsNewColumns(draft: Pick<ItemDraft, (typeof EXTRA_COLUMNS)[number]>): boolean {
+  return Boolean(
+    draft.serving_ru.trim()
+    || draft.serving_en.trim()
+    || draft.image_hidden
+    || draft.image_thumb_url
+    || draft.image_source
+    || draft.image_license
+    || draft.image_attribution
+    || draft.image_review_status,
+  );
+}
+
+async function writeMenuItem(id: string | null, payload: Record<string, unknown>, requireColumns: boolean): Promise<string> {
   const client = requireSupabase();
-  const { data, error } = await client
-    .from("categories")
-    .select(`
-      id, slug, name_ru, name_en, sort_order, is_active,
-      menu_items (
-        id, category_id, name_ru, name_en, description_ru, description_en,
-        image_url, is_available, is_featured, sort_order, updated_at,
-        item_price_options ( id, item_id, label_ru, label_en, price, sort_order )
-      )
-    `)
-    .order("sort_order", { ascending: true });
-  if (error) throw new Error(error.message);
-  return ((data ?? []) as Category[]).map((category) => ({
-    ...category,
-    menu_items: [...(category.menu_items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
-  }));
+  const send = async (body: Record<string, unknown>) => {
+    if (id) return client.from("menu_items").update(body).eq("id", id);
+    return client.from("menu_items").insert(body).select("id").single();
+  };
+
+  let result = await send(payload);
+  if (result.error && /column/i.test(result.error.message)) {
+    if (requireColumns) throw new Error("MIGRATION_REQUIRED");
+    const legacy = { ...payload };
+    for (const key of EXTRA_COLUMNS) delete legacy[key];
+    result = await send(legacy);
+  }
+  if (result.error) throw new Error(result.error.message);
+  if (id) return id;
+  return (result.data as { id: string }).id;
 }
 
 export async function saveItem(id: string | null, draft: ItemDraft): Promise<void> {
@@ -31,20 +59,20 @@ export async function saveItem(id: string | null, draft: ItemDraft): Promise<voi
     description_ru: blankToNull(draft.description_ru),
     description_en: blankToNull(draft.description_en),
     image_url: draft.image_url,
+    image_thumb_url: draft.image_thumb_url,
+    image_source: draft.image_source,
+    image_license: draft.image_license,
+    image_attribution: draft.image_attribution,
+    image_review_status: draft.image_review_status,
+    image_hidden: draft.image_hidden,
+    serving_ru: blankToNull(draft.serving_ru),
+    serving_en: blankToNull(draft.serving_en),
     is_available: draft.is_available,
     is_featured: draft.is_featured,
     sort_order: draft.sort_order,
   };
 
-  let itemId = id;
-  if (itemId) {
-    const { error } = await client.from("menu_items").update(payload).eq("id", itemId);
-    if (error) throw new Error(error.message);
-  } else {
-    const { data, error } = await client.from("menu_items").insert(payload).select("id").single();
-    if (error) throw new Error(error.message);
-    itemId = (data as { id: string }).id;
-  }
+  const itemId = await writeMenuItem(id, payload, needsNewColumns(draft));
 
   const { data: existing, error: existingError } = await client
     .from("item_price_options")
@@ -99,6 +127,14 @@ export async function duplicateItem(item: MenuItem, suffix: string): Promise<voi
     description_ru: item.description_ru ?? "",
     description_en: item.description_en ?? "",
     image_url: item.image_url,
+    image_thumb_url: item.image_thumb_url ?? null,
+    image_source: item.image_source ?? null,
+    image_license: item.image_license ?? null,
+    image_attribution: item.image_attribution ?? null,
+    image_review_status: item.image_review_status ?? null,
+    image_hidden: item.image_hidden ?? false,
+    serving_ru: item.serving_ru ?? "",
+    serving_en: item.serving_en ?? "",
     is_available: item.is_available,
     is_featured: false,
     sort_order: item.sort_order + 1,
@@ -255,6 +291,21 @@ export async function fetchActivity(): Promise<ActivityEntry[]> {
     .limit(8);
   if (error) return [];
   return (data ?? []) as ActivityEntry[];
+}
+
+export type ItemImagePatch = {
+  image_url: string | null;
+  image_thumb_url: string | null;
+  image_source: string | null;
+  image_license: string | null;
+  image_attribution: string | null;
+  image_review_status: "approved" | "needs_review" | null;
+  image_hidden: boolean;
+};
+
+export async function updateItemImage(id: string, patch: ItemImagePatch): Promise<void> {
+  await writeMenuItem(id, patch, true);
+  await logActivity(patch.image_hidden ? "hidden" : "updated", "menu_item", id, "image");
 }
 
 export async function removeImage(url: string | null, bucket: "menu-images" | "branding"): Promise<void> {

@@ -8,8 +8,31 @@ export function validateImageFile(file: File): string | null {
 }
 
 export async function compressImage(file: File): Promise<{ blob: Blob; contentType: string; extension: string }> {
+  return renderScaled(file, 1600, 0.82);
+}
+
+export async function compressImagePair(file: File): Promise<{
+  detail: Blob;
+  card: Blob;
+  contentType: string;
+  extension: string;
+}> {
+  const detail = await renderScaled(file, 1600, 0.82);
+  const card = await renderScaled(file, 960, 0.76);
+  return {
+    detail: detail.blob,
+    card: card.blob,
+    contentType: detail.contentType,
+    extension: detail.extension,
+  };
+}
+
+async function renderScaled(
+  file: File,
+  maxEdge: number,
+  quality: number,
+): Promise<{ blob: Blob; contentType: string; extension: string }> {
   const bitmap = await createImageBitmap(file);
-  const maxEdge = 1600;
   const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
   const width = Math.max(1, Math.round(bitmap.width * scale));
   const height = Math.max(1, Math.round(bitmap.height * scale));
@@ -24,9 +47,9 @@ export async function compressImage(file: File): Promise<{ blob: Blob; contentTy
   context.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
 
-  const webp = await canvasToBlob(canvas, "image/webp", 0.82);
+  const webp = await canvasToBlob(canvas, "image/webp", quality);
   if (webp) return { blob: webp, contentType: "image/webp", extension: "webp" };
-  const jpeg = await canvasToBlob(canvas, "image/jpeg", 0.86);
+  const jpeg = await canvasToBlob(canvas, "image/jpeg", Math.min(0.9, quality + 0.06));
   if (jpeg) return { blob: jpeg, contentType: "image/jpeg", extension: "jpg" };
   throw new Error("Could not prepare the image");
 }

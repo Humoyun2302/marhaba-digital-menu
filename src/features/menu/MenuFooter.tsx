@@ -18,12 +18,12 @@ export function MenuFooter({ settings }: MenuFooterProps) {
   const instagram = settings?.instagram_url?.trim();
 
   return (
-    <footer className="border-t border-line px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))] text-center sm:px-6">
+    <footer className="px-4 py-12 pb-[max(3rem,env(safe-area-inset-bottom))] text-center sm:px-6">
       <Flourish className="mx-auto mb-6 h-4 w-44 text-burgundy/70" />
       <div className="flex justify-center">
         <Logo variant="footer" logoUrl={settings?.logo_url} />
       </div>
-      <p className="mt-4 font-serif text-xl tracking-[0.16em] text-wine">{name}</p>
+      <p className="mt-4 font-serif text-xl tracking-[0.16em] text-ink">{name}</p>
       {subtitle ? <p className="mt-1 text-sm text-muted">{subtitle}</p> : null}
       <div className="mx-auto mt-4 max-w-sm space-y-1 text-sm text-muted">
         {address ? <p className="whitespace-pre-line">{address}</p> : null}

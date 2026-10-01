@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
@@ -8,11 +9,12 @@ type DialogProps = {
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;
+  footer?: ReactNode;
 };
 
 const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
-export function Dialog({ open, title, closeLabel, onClose, children, wide = false }: DialogProps) {
+export function Dialog({ open, title, closeLabel, onClose, children, wide = false, footer }: DialogProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const previous = useRef<HTMLElement | null>(null);
@@ -59,32 +61,34 @@ export function Dialog({ open, title, closeLabel, onClose, children, wide = fals
 
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6">
-      <div className="absolute inset-0 bg-wine/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-wine/35" onClick={onClose} />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`relative max-h-[min(92dvh,900px)] w-full overflow-y-auto rounded-t-xl bg-paper shadow-xl sm:rounded-xl ${
-          wide ? "sm:max-w-xl" : "sm:max-w-md"
+        className={`relative flex max-h-[min(92dvh,900px)] w-full flex-col overflow-hidden rounded-t-[28px] bg-paper shadow-[0_20px_60px_rgba(28,25,23,0.14)] sm:rounded-[28px] ${
+          wide ? "sm:max-w-2xl" : "sm:max-w-md"
         }`}
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-line bg-paper px-5 py-4">
-          <h2 id={titleId} className="font-serif text-2xl leading-none text-wine">
+        <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-line sm:hidden" />
+        <div className="flex items-center justify-between gap-4 px-5 py-4">
+          <h2 id={titleId} className="font-serif text-2xl leading-none text-ink">
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-11 w-11 place-items-center text-burgundy"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px] text-burgundy hover:bg-ivory"
             aria-label={closeLabel}
           >
-            <span aria-hidden="true" className="text-2xl leading-none">
-              ×
-            </span>
+            <X size={18} />
           </button>
         </div>
-        <div className="px-5 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">{children}</div>
+        <div className="overflow-y-auto px-5 pb-5">{children}</div>
+        {footer ? (
+          <div className="border-t border-line bg-paper px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</div>
+        ) : null}
       </div>
     </div>,
     document.body,

@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Flourish, PageOrnaments } from "../components/Ornament";
+import { Flourish } from "../components/Ornament";
+import { Button, EmptyState, SearchField, SkeletonBlock } from "../components/ui";
 import { CategoryNav } from "../features/menu/CategoryNav";
+import { FoodCard } from "../features/menu/FoodCard";
 import { ItemDetail } from "../features/menu/ItemDetail";
 import { fetchPublicMenu, fetchSettings } from "../features/menu/api";
 import { MenuFooter } from "../features/menu/MenuFooter";
 import { MenuHeader } from "../features/menu/MenuHeader";
-import { MenuItemRow } from "../features/menu/MenuItemRow";
 import { useLanguage } from "../i18n/language";
 import type { Category, MenuItem } from "../types/menu";
 import { errorText, localizedName } from "../utils/format";
@@ -76,82 +77,96 @@ export function MenuPage() {
 
   return (
     <div id="top" className="min-h-dvh overflow-x-clip">
-      <PageOrnaments />
       <a
         href="#menu-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-paper focus:px-3 focus:py-2"
       >
         {t.skip}
       </a>
-      <div ref={stickyRef} className="sticky top-0 z-30 bg-ivory/90 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur-md sm:px-6">
-        <div className="mx-auto flex max-w-3xl flex-col gap-3">
+      <div ref={stickyRef} className="sticky top-0 z-30 border-b border-line/80 bg-ivory/95 px-3.5 pt-[max(0.65rem,env(safe-area-inset-top))] pb-3 backdrop-blur-md sm:px-6">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2.5">
           <MenuHeader logoUrl={settingsQuery.data?.logo_url} />
-          <label className="relative block">
-            <span className="sr-only">{t.searchLabel}</span>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={t.searchPlaceholder}
-              enterKeyHint="search"
-              className="h-12 w-full rounded-full border border-line bg-paper px-5 pr-12 text-base text-ink shadow-[var(--shadow-soft)] placeholder:text-muted"
-            />
-            {query ? (
-              <button type="button" aria-label={t.clearSearch} onClick={() => setQuery("")} className="absolute top-0 right-1 grid h-12 w-12 place-items-center text-burgundy">
-                ×
-              </button>
-            ) : null}
-          </label>
+          <div className="max-w-md">
+          <SearchField
+            pill
+            value={query}
+            onChange={setQuery}
+            placeholder={t.searchPlaceholder}
+            label={t.searchLabel}
+            clearLabel={t.clearSearch}
+            onClear={() => setQuery("")}
+          />
+          </div>
           {!menuQuery.isLoading && !loadError ? <CategoryNav categories={visible} activeId={resolvedActiveId} onSelect={selectCategory} /> : null}
         </div>
       </div>
 
-      <main id="menu-content" className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
+      <main id="menu-content" className="mx-auto w-full max-w-6xl px-3.5 py-6 sm:px-6 sm:py-8">
         {menuQuery.isLoading ? <MenuSkeleton /> : null}
         {loadError ? (
-          <div className="rounded-xl border border-line bg-paper px-5 py-8 text-center shadow-[var(--shadow-soft)]">
-            <p className="font-serif text-3xl text-wine">{t.loadError}</p>
-            <p className="mt-2 text-sm text-muted">{t.loadErrorHint}</p>
-            {import.meta.env.DEV ? <p className="mt-3 text-xs text-muted">{errorText(loadError)}</p> : null}
-            <button
-              type="button"
-              onClick={() => {
-                void menuQuery.refetch();
-                void settingsQuery.refetch();
-              }}
-              className="mt-5 h-11 rounded-md bg-burgundy px-5 text-sm text-ivory"
-            >
-              {t.retry}
-            </button>
-          </div>
+          <EmptyState
+            title={t.loadError}
+            text={import.meta.env.DEV ? `${t.loadErrorHint} ${errorText(loadError)}` : t.loadErrorHint}
+            action={
+              <Button
+                onClick={() => {
+                  void menuQuery.refetch();
+                  void settingsQuery.refetch();
+                }}
+              >
+                {t.retry}
+              </Button>
+            }
+          />
         ) : null}
         {!menuQuery.isLoading && !loadError && visible.length === 0 && query.trim() ? (
-          <div className="px-4 py-16 text-center">
+          <div className="px-2 py-10 text-center">
             <Flourish className="mx-auto mb-4 h-4 w-36 text-burgundy/70" />
-            <p className="font-serif text-3xl text-wine">{t.nothingFound}</p>
+            <p className="font-serif text-3xl text-ink">{t.nothingFound}</p>
             <p className="mt-2 text-sm text-muted">{t.nothingFoundHint}</p>
           </div>
         ) : null}
         {!menuQuery.isLoading && !loadError && visible.length === 0 && !query.trim() ? (
-          <div className="px-4 py-16 text-center">
-            <p className="font-serif text-3xl text-wine">{t.emptyMenu}</p>
+          <div className="px-2 py-10 text-center">
+            <p className="font-serif text-3xl text-ink">{t.emptyMenu}</p>
           </div>
         ) : null}
-        {visible.map((category) => (
-          <section key={category.id} id={`category-${category.id}`} className="menu-section pt-8 first:pt-2">
-            <div className="mb-3 flex items-end justify-between gap-3">
-              <h2 className="font-serif text-4xl leading-none text-wine">{localizedName(lang, category.name_ru, category.name_en)}</h2>
-              <p className="text-sm text-muted">{category.menu_items.length}</p>
-            </div>
-            <div className="space-y-3">
-              {category.menu_items.map((item) => (
-                <MenuItemRow key={item.id} item={item} onOpen={setOpenItem} />
-              ))}
-            </div>
-          </section>
-        ))}
+        <div className="flex flex-col gap-10 sm:gap-14">
+          {visible.map((category) => {
+            const title = localizedName(lang, category.name_ru, category.name_en);
+            const alt = (lang === "ru" ? category.name_en : category.name_ru)?.trim();
+            const showAlt = Boolean(alt) && alt.toLocaleLowerCase() !== title.toLocaleLowerCase();
+            return (
+              <section key={category.id} id={`category-${category.id}`} className="menu-section">
+                <header className="mb-4 text-center sm:mb-6">
+                  <h2 className="font-serif text-[2.15rem] leading-none text-ink sm:text-5xl">{title}</h2>
+                  <div className="mx-auto mt-3 h-px w-14 bg-burgundy/30" />
+                  {showAlt ? <p className="mt-2 text-[11px] font-medium tracking-[0.18em] text-muted uppercase">{alt}</p> : null}
+                </header>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-4">
+                  {category.menu_items.map((item) => (
+                    <FoodCard key={item.id} item={item} onOpen={setOpenItem} />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </main>
       <MenuFooter settings={settingsQuery.data ?? null} />
-      <ItemDetail item={openItem} onClose={() => setOpenItem(null)} />
+      <ItemDetail
+        item={openItem}
+        categoryName={
+          openItem
+            ? localizedName(
+                lang,
+                (menuQuery.data ?? []).find((category) => category.id === openItem.category_id)?.name_ru,
+                (menuQuery.data ?? []).find((category) => category.id === openItem.category_id)?.name_en,
+              )
+            : ""
+        }
+        onClose={() => setOpenItem(null)}
+      />
     </div>
   );
 }
@@ -173,10 +188,15 @@ function filterMenu(categories: Category[], query: string, lang: "ru" | "en"): C
 
 function MenuSkeleton() {
   return (
-    <div className="space-y-4" aria-hidden="true">
-        <div className="h-10 w-40 rounded-md bg-burgundy/10" />
-      {Array.from({ length: 5 }, (_, index) => (
-        <div key={index} className="h-20 rounded-lg bg-paper" />
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4" aria-hidden="true">
+      {Array.from({ length: 6 }, (_, index) => (
+        <div key={index} className="overflow-hidden rounded-[22px] border border-line bg-paper">
+          <SkeletonBlock className="aspect-[4/3] rounded-none" />
+          <div className="space-y-2 p-3">
+            <SkeletonBlock className="h-5 w-4/5" />
+            <SkeletonBlock className="h-4 w-1/2" />
+          </div>
+        </div>
       ))}
     </div>
   );

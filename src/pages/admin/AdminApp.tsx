@@ -6,7 +6,9 @@ import { AdminLayout } from "./AdminLayout";
 import { AdminLoginPage } from "./AdminLoginPage";
 import { CategoriesPage } from "./CategoriesPage";
 import { DashboardPage } from "./DashboardPage";
+import { ImagesPage } from "./ImagesPage";
 import { ItemsPage } from "./ItemsPage";
+import { QrPage } from "./QrPage";
 import { SettingsPage } from "./SettingsPage";
 
 export default function AdminApp() {
@@ -31,6 +33,8 @@ export default function AdminApp() {
           <Route index element={<DashboardPage />} />
           <Route path="items" element={<ItemsPage />} />
           <Route path="categories" element={<CategoriesPage />} />
+          <Route path="qr" element={<QrPage />} />
+          <Route path="images" element={<ImagesPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

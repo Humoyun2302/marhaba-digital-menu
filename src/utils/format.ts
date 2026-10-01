@@ -25,6 +25,15 @@ export function priceLines(options: PriceOption[], lang: Lang): string[] {
   });
 }
 
+export function moneySuffix(lang: Lang): string {
+  return lang === "ru" ? "сум" : "UZS";
+}
+
+export function publicPriceLines(options: PriceOption[], lang: Lang): string[] {
+  const suffix = moneySuffix(lang);
+  return priceLines(options, lang).map((line) => `${line} ${suffix}`);
+}
+
 export function blankToNull(value: string): string | null {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;

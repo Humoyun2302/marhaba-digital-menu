@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { EyeOff, FolderTree, LayoutGrid, UtensilsCrossed } from "lucide-react";
 import { Cell, Pie, PieChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { AdminPageHeader, Button, StatusBadge } from "../../components/ui";
 import { fetchActivity, fetchAdminMenu, fetchDashboard, type RecentDish } from "../../features/admin/api";
 import { useLanguage } from "../../i18n/language";
 import { errorText, formatPrice, localizedName } from "../../utils/format";
@@ -16,18 +17,18 @@ export function DashboardPage() {
     return (
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <div key={index} className="h-28 animate-pulse rounded-lg bg-paper" />
+          <div key={index} className="h-28 animate-pulse rounded-[22px] bg-paper" />
         ))}
       </div>
     );
   }
   if (stats.isError) {
     return (
-      <div className="rounded-xl border border-line bg-paper p-6">
-        <p>{t.loadError}</p>
-        <button type="button" onClick={() => void stats.refetch()} className="mt-4 h-11 rounded-md bg-burgundy px-4 text-sm text-ivory">
+      <div className="rounded-[24px] border border-line bg-paper p-6 shadow-[var(--shadow-soft)]">
+        <p className="font-serif text-3xl text-ink">{t.loadError}</p>
+        <Button className="mt-4" onClick={() => void stats.refetch()}>
           {t.retry}
-        </button>
+        </Button>
         {import.meta.env.DEV ? <p className="mt-2 text-xs text-muted">{errorText(stats.error)}</p> : null}
       </div>
     );
@@ -48,9 +49,8 @@ export function DashboardPage() {
   ];
 
   return (
-    <div>
-      <p className="text-sm text-muted">{lang === "ru" ? "Добро пожаловать" : "Welcome back"}</p>
-      <h1 className="mt-1 font-serif text-4xl text-ink">{t.dashboard}</h1>
+    <div className="min-w-0">
+      <AdminPageHeader eyebrow={lang === "ru" ? "Добро пожаловать" : "Welcome back"} title={t.dashboard} />
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat icon={<UtensilsCrossed size={18} />} label={t.totalDishes} value={data.total} />
         <Stat icon={<LayoutGrid size={18} />} label={t.available} value={data.available} />
@@ -59,14 +59,7 @@ export function DashboardPage() {
       </div>
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <ChartCard title={lang === "ru" ? "Блюда по категориям" : "Menu items by category"} className="xl:col-span-2">
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={byCategory}>
-              <XAxis dataKey="name" tick={{ fill: "#746c64", fontSize: 11 }} interval={0} angle={-28} height={70} textAnchor="end" axisLine={false} tickLine={false} />
-              <YAxis allowDecimals={false} tick={{ fill: "#746c64", fontSize: 12 }} axisLine={false} tickLine={false} width={28} />
-              <Tooltip content={<ChartTip />} />
-              <Bar dataKey="items" radius={[8, 8, 0, 0]} fill="#721f2a" />
-            </BarChart>
-          </ResponsiveContainer>
+          <CategoryBars data={byCategory} />
         </ChartCard>
         <ChartCard title={lang === "ru" ? "Доступность" : "Availability"}>
           <ResponsiveContainer width="100%" height={220}>
@@ -90,13 +83,13 @@ export function DashboardPage() {
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={byCategory} layout="vertical" margin={{ left: 12 }}>
               <XAxis type="number" hide />
-              <YAxis type="category" dataKey="name" width={110} tick={{ fill: "#746c64", fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" width={124} tickFormatter={shortName} tick={{ fill: "#746c64", fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTip money />} />
               <Bar dataKey="average" radius={[0, 8, 8, 0]} fill="#c6a15b" />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
-        <section className="rounded-xl border border-line bg-paper p-5 shadow-[var(--shadow-soft)]">
+        <section className="min-w-0 rounded-[24px] border border-line bg-paper p-5 shadow-[var(--shadow-soft)]">
           <h2 className="font-serif text-2xl text-ink">{t.recent}</h2>
           {activity.data && activity.data.length > 0 ? (
             <ul className="mt-4 space-y-3">
@@ -119,9 +112,7 @@ export function DashboardPage() {
                     <p className="font-medium">{localizedName(lang, item.name_ru, item.name_en)}</p>
                     <p className="text-sm text-muted">{categoryName(item, lang)}</p>
                   </div>
-                  <span className={`rounded-full px-2.5 py-1 text-xs ${item.is_available ? "bg-burgundy/10 text-burgundy" : "bg-ivory text-muted"}`}>
-                    {item.is_available ? t.available : t.hidden}
-                  </span>
+                  <StatusBadge active={item.is_available} activeLabel={t.available} inactiveLabel={t.hidden} />
                 </li>
               ))}
             </ul>
@@ -140,16 +131,62 @@ function averagePrice(items: { item_price_options: { price: number }[] }[]): num
 
 function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-line bg-paper p-4 shadow-[var(--shadow-soft)]">
+    <div className="rounded-[22px] border border-line bg-paper p-4 shadow-[var(--shadow-soft)]">
       <div className="flex items-center justify-between text-burgundy">{icon}<span className="text-xs text-muted">{label}</span></div>
       <p className="mt-3 font-serif text-4xl text-ink">{value}</p>
     </div>
   );
 }
 
+function shortName(value: string) {
+  if (value.length <= 16) return value;
+  const cut = value.slice(0, 15);
+  const space = cut.lastIndexOf(" ");
+  const base = space > 7 ? cut.slice(0, space) : cut.trimEnd();
+  return `${base}…`;
+}
+
+function CategoryBars({ data }: { data: { name: string; items: number }[] }) {
+  const compact = useCompact();
+  if (compact) {
+    return (
+      <ResponsiveContainer width="100%" height={Math.max(200, data.length * 40)}>
+        <BarChart data={data} layout="vertical" margin={{ left: 4, right: 8, top: 4, bottom: 4 }}>
+          <XAxis type="number" hide />
+          <YAxis type="category" dataKey="name" width={124} tickFormatter={shortName} tick={{ fill: "#746c64", fontSize: 11 }} axisLine={false} tickLine={false} />
+          <Tooltip content={<ChartTip />} />
+          <Bar dataKey="items" radius={[0, 8, 8, 0]} fill="#721f2a" />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  }
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+        <XAxis dataKey="name" tickFormatter={shortName} tick={{ fill: "#746c64", fontSize: 11 }} interval={0} angle={-28} height={72} textAnchor="end" axisLine={false} tickLine={false} />
+        <YAxis allowDecimals={false} tick={{ fill: "#746c64", fontSize: 12 }} axisLine={false} tickLine={false} width={28} />
+        <Tooltip content={<ChartTip />} />
+        <Bar dataKey="items" radius={[8, 8, 0, 0]} fill="#721f2a" />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function useCompact() {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 640px)");
+    const apply = () => setCompact(query.matches);
+    apply();
+    query.addEventListener("change", apply);
+    return () => query.removeEventListener("change", apply);
+  }, []);
+  return compact;
+}
+
 function ChartCard({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-xl border border-line bg-paper p-5 shadow-[var(--shadow-soft)] ${className}`}>
+    <section className={`min-w-0 rounded-[24px] border border-line bg-paper p-4 shadow-[var(--shadow-soft)] sm:p-5 ${className}`}>
       <h2 className="mb-3 font-serif text-2xl text-ink">{title}</h2>
       {children}
     </section>
@@ -160,7 +197,7 @@ function ChartTip({ active, payload, label, money }: { active?: boolean; payload
   if (!active || !payload?.length) return null;
   const value = payload[0]?.value ?? 0;
   return (
-    <div className="rounded-md border border-line bg-paper px-3 py-2 text-sm shadow-sm">
+    <div className="rounded-[14px] border border-line bg-paper px-3 py-2 text-sm shadow-[var(--shadow-soft)]">
       <p className="text-muted">{label || payload[0]?.name}</p>
       <p className="font-semibold text-ink">{money ? formatPrice(value) : value}</p>
     </div>

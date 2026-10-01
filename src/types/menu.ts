@@ -17,6 +17,14 @@ export type MenuItem = {
   description_ru: string | null;
   description_en: string | null;
   image_url: string | null;
+  image_thumb_url?: string | null;
+  image_source?: string | null;
+  image_license?: string | null;
+  image_attribution?: string | null;
+  image_review_status?: "approved" | "needs_review" | null;
+  image_hidden?: boolean;
+  serving_ru?: string | null;
+  serving_en?: string | null;
   is_available: boolean;
   is_featured: boolean;
   sort_order: number;
@@ -46,6 +54,8 @@ export type SiteSettings = {
   instagram_url: string | null;
   opening_hours_ru: string | null;
   opening_hours_en: string | null;
+  qr_domain?: string | null;
+  qr_domain_locked?: boolean;
   updated_at: string;
 };
 
@@ -56,6 +66,14 @@ export type ItemDraft = {
   description_ru: string;
   description_en: string;
   image_url: string | null;
+  image_thumb_url: string | null;
+  image_source: string | null;
+  image_license: string | null;
+  image_attribution: string | null;
+  image_review_status: "approved" | "needs_review" | null;
+  image_hidden: boolean;
+  serving_ru: string;
+  serving_en: string;
   is_available: boolean;
   is_featured: boolean;
   sort_order: number;

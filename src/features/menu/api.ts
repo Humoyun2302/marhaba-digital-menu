@@ -18,6 +18,14 @@ type ItemRow = {
   description_ru: string | null;
   description_en: string | null;
   image_url: string | null;
+  image_thumb_url?: string | null;
+  image_source?: string | null;
+  image_license?: string | null;
+  image_attribution?: string | null;
+  image_review_status?: "approved" | "needs_review" | null;
+  image_hidden?: boolean;
+  serving_ru?: string | null;
+  serving_en?: string | null;
   is_available: boolean;
   is_featured: boolean;
   sort_order: number;
@@ -55,6 +63,14 @@ function mapItem(row: ItemRow): MenuItem {
     description_ru: row.description_ru,
     description_en: row.description_en,
     image_url: row.image_url,
+    image_thumb_url: row.image_thumb_url ?? null,
+    image_source: row.image_source ?? null,
+    image_license: row.image_license ?? null,
+    image_attribution: row.image_attribution ?? null,
+    image_review_status: row.image_review_status ?? null,
+    image_hidden: row.image_hidden ?? false,
+    serving_ru: row.serving_ru ?? null,
+    serving_en: row.serving_en ?? null,
     is_available: row.is_available,
     is_featured: row.is_featured,
     sort_order: row.sort_order,
@@ -63,25 +79,42 @@ function mapItem(row: ItemRow): MenuItem {
   };
 }
 
-const MENU_SELECT = `
-  id, slug, name_ru, name_en, sort_order, is_active,
-  menu_items (
-    id, category_id, name_ru, name_en, description_ru, description_en,
-    image_url, is_available, is_featured, sort_order, updated_at,
-    item_price_options ( id, item_id, label_ru, label_en, price, sort_order )
-  )
+const ITEM_FIELDS = `
+  id, category_id, name_ru, name_en, description_ru, description_en,
+  image_url, is_available, is_featured, sort_order, updated_at
 `;
 
-export async function fetchPublicMenu(): Promise<Category[]> {
-  const client = requireSupabase();
-  const { data, error } = await client
-    .from("categories")
-    .select(MENU_SELECT)
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true });
-  if (error) throw new Error(error.message);
+const ITEM_FIELDS_EXTENDED = `
+  ${ITEM_FIELDS},
+  image_thumb_url, image_source, image_license, image_attribution, image_review_status, image_hidden,
+  serving_ru, serving_en
+`;
 
-  return ((data ?? []) as CategoryRow[])
+function categorySelect(itemFields: string): string {
+  return `
+    id, slug, name_ru, name_en, sort_order, is_active,
+    menu_items (
+      ${itemFields},
+      item_price_options ( id, item_id, label_ru, label_en, price, sort_order )
+    )
+  `;
+}
+
+export async function fetchMenuCategories(options: { activeOnly: boolean; availableOnly: boolean }): Promise<Category[]> {
+  const client = requireSupabase();
+  const load = (itemFields: string) => {
+    let query = client.from("categories").select(categorySelect(itemFields)).order("sort_order", { ascending: true });
+    if (options.activeOnly) query = query.eq("is_active", true);
+    return query;
+  };
+
+  let response = await load(ITEM_FIELDS_EXTENDED);
+  if (response.error && /column/i.test(response.error.message)) {
+    response = await load(ITEM_FIELDS);
+  }
+  if (response.error) throw new Error(response.error.message);
+
+  return ((response.data ?? []) as unknown as CategoryRow[])
     .map((category) => ({
       id: category.id,
       slug: category.slug,
@@ -90,12 +123,16 @@ export async function fetchPublicMenu(): Promise<Category[]> {
       sort_order: category.sort_order,
       is_active: category.is_active,
       menu_items: (category.menu_items ?? [])
-        .filter((item) => item.is_available)
+        .filter((item) => (options.availableOnly ? item.is_available : true))
         .map(mapItem)
         .sort((a, b) => a.sort_order - b.sort_order),
     }))
-    .filter((category) => category.menu_items.length > 0)
+    .filter((category) => (options.availableOnly ? category.menu_items.length > 0 : true))
     .sort((a, b) => a.sort_order - b.sort_order);
+}
+
+export async function fetchPublicMenu(): Promise<Category[]> {
+  return fetchMenuCategories({ activeOnly: true, availableOnly: true });
 }
 
 export async function fetchSettings(): Promise<SiteSettings | null> {

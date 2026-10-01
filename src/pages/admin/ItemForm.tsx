@@ -1,10 +1,14 @@
+import { ImagePlus, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { Dialog } from "../../components/Dialog";
+import { buttonClass, Button, DialogActions, Field, FormSection, Select, Switch, TextArea, TextInput } from "../../components/ui";
 import { removeImage } from "../../features/admin/api";
+import { uploadDishPhoto } from "../../features/admin/upload-photo";
+import { bundledPhotos } from "../../features/menu/photos";
 import { useLanguage } from "../../i18n/language";
 import { supabase } from "../../lib/supabase";
 import type { Category, ItemDraft, MenuItem } from "../../types/menu";
-import { compressImage, uploadWithProgress, validateImageFile } from "../../utils/image";
+import { validateImageFile } from "../../utils/image";
 
 type OptionDraft = {
   key: string;
@@ -22,13 +26,21 @@ type ItemFormProps = {
 };
 
 export function ItemForm({ categories, item, onClose, onSave }: ItemFormProps) {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [categoryId, setCategoryId] = useState(item?.category_id ?? categories[0]?.id ?? "");
   const [nameRu, setNameRu] = useState(item?.name_ru ?? "");
   const [nameEn, setNameEn] = useState(item?.name_en ?? "");
   const [descriptionRu, setDescriptionRu] = useState(item?.description_ru ?? "");
   const [descriptionEn, setDescriptionEn] = useState(item?.description_en ?? "");
+  const [servingRu, setServingRu] = useState(item?.serving_ru ?? "");
+  const [servingEn, setServingEn] = useState(item?.serving_en ?? "");
   const [imageUrl, setImageUrl] = useState<string | null>(item?.image_url ?? null);
+  const [thumbUrl, setThumbUrl] = useState<string | null>(item?.image_thumb_url ?? null);
+  const [imageHidden, setImageHidden] = useState(item?.image_hidden ?? false);
+  const [imageSource, setImageSource] = useState<string | null>(item?.image_source ?? null);
+  const [imageLicense, setImageLicense] = useState<string | null>(item?.image_license ?? null);
+  const [imageAttribution, setImageAttribution] = useState<string | null>(item?.image_attribution ?? null);
+  const [imageReview, setImageReview] = useState(item?.image_review_status ?? null);
   const [available, setAvailable] = useState(item?.is_available ?? true);
   const [featured, setFeatured] = useState(item?.is_featured ?? false);
   const [sortOrder, setSortOrder] = useState(String(item?.sort_order ?? nextSort(categories, item?.category_id ?? categories[0]?.id)));
@@ -56,21 +68,19 @@ export function ItemForm({ categories, item, onClose, onSave }: ItemFormProps) {
     setError("");
     setProgress(0.05);
     try {
-      const prepared = await compressImage(file);
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) throw new Error(t.unauthorized);
-      const path = `${crypto.randomUUID()}.${prepared.extension}`;
-      const url = await uploadWithProgress({
-        bucket: "menu-images",
-        path,
-        blob: prepared.blob,
-        contentType: prepared.contentType,
-        accessToken: token,
-        onProgress: setProgress,
-      });
+      const uploaded = await uploadDishPhoto(file, token, setProgress);
       if (imageUrl && imageUrl !== item?.image_url) await removeImage(imageUrl, "menu-images");
-      setImageUrl(url);
+      if (thumbUrl && thumbUrl !== item?.image_thumb_url) await removeImage(thumbUrl, "menu-images");
+      setImageUrl(uploaded.image_url);
+      setThumbUrl(uploaded.image_thumb_url);
+      setImageHidden(false);
+      setImageSource(lang === "ru" ? "Загружено администратором" : "Uploaded by an administrator");
+      setImageLicense("Restaurant");
+      setImageAttribution(null);
+      setImageReview("approved");
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : t.uploadError);
     } finally {
@@ -116,6 +126,14 @@ export function ItemForm({ categories, item, onClose, onSave }: ItemFormProps) {
         description_ru: descriptionRu,
         description_en: descriptionEn,
         image_url: imageUrl,
+        image_thumb_url: thumbUrl,
+        image_source: imageSource,
+        image_license: imageLicense,
+        image_attribution: imageAttribution,
+        image_review_status: imageReview,
+        image_hidden: imageHidden,
+        serving_ru: servingRu,
+        serving_en: servingEn,
         is_available: available,
         is_featured: featured,
         sort_order: order,
@@ -123,39 +141,85 @@ export function ItemForm({ categories, item, onClose, onSave }: ItemFormProps) {
       });
       onClose();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : t.saveError);
+      const message = saveError instanceof Error ? saveError.message : t.saveError;
+      setError(message === "MIGRATION_REQUIRED" ? t.migrationRequired : message);
     } finally {
       setSaving(false);
     }
   }
 
+  const bundled = item && !imageHidden ? bundledPhotos[item.id] : undefined;
+  const preview = imageHidden ? null : imageUrl || bundled?.detail || null;
+  const shownSource = imageSource || (!imageUrl && bundled ? bundled.attribution : null);
+  const shownLicense = imageLicense || (!imageUrl && bundled ? bundled.license : null);
+
   return (
-    <Dialog open title={item ? t.editDish : t.addDish} closeLabel={t.close} onClose={onClose} wide>
+    <Dialog
+      open
+      wide
+      title={item ? t.editDish : t.addDish}
+      closeLabel={t.close}
+      onClose={onClose}
+      footer={
+        <DialogActions>
+          <Button variant="secondary" className="w-full sm:w-auto" onClick={onClose}>
+            {t.cancel}
+          </Button>
+          <Button className="w-full sm:w-auto" loading={saving} disabled={progress !== null} onClick={() => void submit()}>
+            {saving ? t.saving : t.save}
+          </Button>
+        </DialogActions>
+      }
+    >
       <div className="space-y-4">
-        <label className="block text-sm text-muted">
-          {t.category}
-          <select
-            value={categoryId}
-            onChange={(event) => setCategoryId(event.target.value)}
-            className="mt-1 h-11 w-full border border-line bg-ivory px-3 text-base text-ink"
-          >
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name_ru} / {category.name_en}
-              </option>
-            ))}
-          </select>
-        </label>
-        <TextField label={t.nameRu} value={nameRu} onChange={setNameRu} required />
-        <TextField label={t.nameEn} value={nameEn} onChange={setNameEn} required />
-        <TextArea label={`${t.descRu} (${t.optional})`} value={descriptionRu} onChange={setDescriptionRu} />
-        <TextArea label={`${t.descEn} (${t.optional})`} value={descriptionEn} onChange={setDescriptionEn} />
-        <div>
-          <p className="text-sm text-muted">{t.image}</p>
-          {imageUrl ? <img src={imageUrl} alt="" className="mt-2 h-28 w-40 object-cover" /> : null}
-          <div className="mt-2 flex flex-wrap gap-2">
-            <label className="inline-flex h-11 cursor-pointer items-center bg-wine px-4 text-sm text-ivory">
-              {imageUrl ? t.changeImage : t.upload}
+        <FormSection title={t.sectionBasics}>
+          <Field label={t.category}>
+            <Select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name_ru} / {category.name_en}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={t.nameRu}>
+            <TextInput value={nameRu} onChange={(event) => setNameRu(event.target.value)} required />
+          </Field>
+          <Field label={t.nameEn}>
+            <TextInput value={nameEn} onChange={(event) => setNameEn(event.target.value)} required />
+          </Field>
+          <Field label={t.descRu} hint={t.optional}>
+            <TextArea value={descriptionRu} rows={3} onChange={(event) => setDescriptionRu(event.target.value)} />
+          </Field>
+          <Field label={t.descEn} hint={t.optional}>
+            <TextArea value={descriptionEn} rows={3} onChange={(event) => setDescriptionEn(event.target.value)} />
+          </Field>
+          <Field label={t.servingRu} hint={t.optional}>
+            <TextInput value={servingRu} onChange={(event) => setServingRu(event.target.value)} />
+          </Field>
+          <Field label={t.servingEn} hint={t.optional}>
+            <TextInput value={servingEn} onChange={(event) => setServingEn(event.target.value)} />
+          </Field>
+        </FormSection>
+
+        <FormSection title={t.sectionPhoto} hint={t.imageHint}>
+          {preview ? (
+            <img src={preview} alt="" className="aspect-[4/3] w-full max-w-xs rounded-[16px] object-cover" />
+          ) : (
+            <div className="grid h-28 place-items-center rounded-[16px] border border-dashed border-line bg-paper text-muted">
+              <ImagePlus size={22} />
+            </div>
+          )}
+          {shownSource || shownLicense ? (
+            <p className="text-xs leading-relaxed text-muted">
+              {shownSource ? `${t.imageAdminSource}: ${shownSource}` : null}
+              {shownLicense ? ` · ${t.imageAdminLicense}: ${shownLicense}` : null}
+            </p>
+          ) : null}
+          {imageReview === "needs_review" ? <p className="text-xs font-medium text-burgundy">{t.imageReview}</p> : null}
+          <div className="flex flex-wrap gap-2">
+            <label className={buttonClass("secondary", "sm", "cursor-pointer")}>
+              {preview ? t.changeImage : t.upload}
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
@@ -163,93 +227,90 @@ export function ItemForm({ categories, item, onClose, onSave }: ItemFormProps) {
                 onChange={(event) => void onFile(event.target.files?.[0])}
               />
             </label>
-            {imageUrl ? (
-              <button
-                type="button"
-                className="h-11 border border-line px-4 text-sm"
+            {preview ? (
+              <Button
+                variant="danger"
+                size="sm"
                 onClick={() => {
-                  void removeImage(imageUrl, "menu-images");
+                  if (imageUrl) void removeImage(imageUrl, "menu-images");
+                  if (thumbUrl) void removeImage(thumbUrl, "menu-images");
                   setImageUrl(null);
+                  setThumbUrl(null);
+                  setImageSource(null);
+                  setImageLicense(null);
+                  setImageAttribution(null);
+                  setImageReview(null);
+                  setImageHidden(true);
                 }}
               >
                 {t.removeImage}
-              </button>
+              </Button>
             ) : null}
           </div>
-          <p className="mt-1 text-xs text-muted">{t.imageHint}</p>
           {progress !== null ? (
-            <div className="mt-2 h-1.5 bg-line" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100} role="progressbar">
-              <div className="h-full bg-burgundy" style={{ width: `${Math.round(progress * 100)}%` }} />
+            <div className="h-1.5 overflow-hidden rounded-full bg-line" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100} role="progressbar">
+              <div className="h-full rounded-full bg-burgundy" style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
           ) : null}
-        </div>
-        <label className="flex min-h-11 items-center gap-3 text-sm">
-          <input type="checkbox" checked={available} onChange={(event) => setAvailable(event.target.checked)} />
-          {t.availability}
-        </label>
-        <label className="flex min-h-11 items-center gap-3 text-sm">
-          <input type="checkbox" checked={featured} onChange={(event) => setFeatured(event.target.checked)} />
-          {t.featuredLabel}
-        </label>
-        <TextField label={t.sortOrder} value={sortOrder} onChange={setSortOrder} inputMode="numeric" />
-        <fieldset className="space-y-3 border border-line p-3">
-          <legend className="px-1 text-sm text-muted">{t.pricing}</legend>
-          {options.map((option, index) => (
-            <div key={option.key} className="grid gap-2 sm:grid-cols-3">
-              <input
-                aria-label={t.optionLabelRu}
-                placeholder={t.optionLabelRu}
-                value={option.label_ru}
-                onChange={(event) => updateOption(index, { label_ru: event.target.value })}
-                className="h-11 border border-line bg-ivory px-3 text-base"
-              />
-              <input
-                aria-label={t.optionLabelEn}
-                placeholder={t.optionLabelEn}
-                value={option.label_en}
-                onChange={(event) => updateOption(index, { label_en: event.target.value })}
-                className="h-11 border border-line bg-ivory px-3 text-base"
-              />
-              <div className="flex gap-2">
-                <input
-                  aria-label={t.price}
-                  inputMode="numeric"
-                  placeholder={t.price}
-                  value={option.price}
-                  onChange={(event) => updateOption(index, { price: event.target.value.replace(/[^\d]/g, "") })}
-                  className="h-11 min-w-0 flex-1 border border-line bg-ivory px-3 text-base"
-                />
-                <button
-                  type="button"
-                  aria-label={t.removeOption}
-                  disabled={options.length === 1}
-                  onClick={() => setOptions((current) => current.filter((entry) => entry.key !== option.key))}
-                  className="h-11 w-11 border border-line disabled:opacity-40"
-                >
-                  ×
-                </button>
+        </FormSection>
+
+        <FormSection title={t.sectionVisibility}>
+          <Switch checked={available} onChange={setAvailable} label={t.availability} />
+          <Switch checked={featured} onChange={setFeatured} label={t.featuredLabel} />
+          <Field label={t.sortOrder}>
+            <TextInput inputMode="numeric" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} />
+          </Field>
+        </FormSection>
+
+        <FormSection title={t.pricing}>
+          <div className="space-y-3">
+            {options.map((option, index) => (
+              <div key={option.key} className="rounded-[16px] border border-line bg-paper p-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <TextInput
+                    aria-label={t.optionLabelRu}
+                    placeholder={t.optionLabelRu}
+                    value={option.label_ru}
+                    onChange={(event) => updateOption(index, { label_ru: event.target.value })}
+                  />
+                  <TextInput
+                    aria-label={t.optionLabelEn}
+                    placeholder={t.optionLabelEn}
+                    value={option.label_en}
+                    onChange={(event) => updateOption(index, { label_en: event.target.value })}
+                  />
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <TextInput
+                    aria-label={t.price}
+                    inputMode="numeric"
+                    placeholder={t.price}
+                    value={option.price}
+                    onChange={(event) => updateOption(index, { price: event.target.value.replace(/[^\d]/g, "") })}
+                  />
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    aria-label={t.removeOption}
+                    disabled={options.length === 1}
+                    onClick={() => setOptions((current) => current.filter((entry) => entry.key !== option.key))}
+                  >
+                    <X size={16} />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
-          <button
-            type="button"
-            className="h-11 px-2 text-sm text-burgundy"
-            onClick={() =>
-              setOptions((current) => [...current, { key: crypto.randomUUID(), label_ru: "", label_en: "", price: "" }])
-            }
+            ))}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setOptions((current) => [...current, { key: crypto.randomUUID(), label_ru: "", label_en: "", price: "" }])}
           >
+            <Plus size={16} />
             {t.addOption}
-          </button>
-        </fieldset>
+          </Button>
+        </FormSection>
         {error ? <p className="text-sm text-burgundy">{error}</p> : null}
-        <div className="flex gap-2">
-          <button type="button" disabled={saving || progress !== null} onClick={() => void submit()} className="h-11 flex-1 bg-burgundy text-sm text-ivory disabled:opacity-60">
-            {saving ? t.saving : t.save}
-          </button>
-          <button type="button" onClick={onClose} className="h-11 border border-line px-4 text-sm">
-            {t.cancel}
-          </button>
-        </div>
       </div>
     </Dialog>
   );
@@ -263,45 +324,4 @@ function nextSort(categories: Category[], categoryId: string | undefined): numbe
   const category = categories.find((entry) => entry.id === categoryId);
   const max = category?.menu_items.reduce((highest, item) => Math.max(highest, item.sort_order), -1) ?? -1;
   return max + 1;
-}
-
-function TextField({
-  label,
-  value,
-  onChange,
-  required,
-  inputMode,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  inputMode?: "numeric" | "text";
-}) {
-  return (
-    <label className="block text-sm text-muted">
-      {label}
-      <input
-        required={required}
-        inputMode={inputMode}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1 h-11 w-full border border-line bg-ivory px-3 text-base text-ink"
-      />
-    </label>
-  );
-}
-
-function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="block text-sm text-muted">
-      {label}
-      <textarea
-        value={value}
-        rows={3}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1 w-full border border-line bg-ivory px-3 py-2 text-base text-ink"
-      />
-    </label>
-  );
 }

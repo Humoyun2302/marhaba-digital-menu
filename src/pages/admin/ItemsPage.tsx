@@ -1,7 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronDown, ChevronUp, Plus, UtensilsCrossed } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Dialog } from "../../components/Dialog";
 import { useToast } from "../../components/toast-context";
+import {
+  ActionMenu,
+  AdminPageHeader,
+  Button,
+  DialogActions,
+  EmptyState,
+  EntityCard,
+  SearchField,
+  Select,
+  SkeletonBlock,
+  StatusBadge,
+} from "../../components/ui";
 import { deleteItem, duplicateItem, fetchAdminMenu, saveItem, saveOrder, setItemAvailability } from "../../features/admin/api";
 import { useLanguage } from "../../i18n/language";
 import type { ItemDraft, MenuItem } from "../../types/menu";
@@ -95,90 +108,133 @@ export function ItemsPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-serif text-4xl text-wine">{t.dishes}</h1>
-        <button type="button" onClick={() => setEditing("new")} className="h-11 rounded-md bg-burgundy px-4 text-sm text-ivory">
-          {t.addDish}
-        </button>
-      </div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        <input
+      <AdminPageHeader
+        title={t.dishes}
+        description={t.manageDishes}
+        action={
+          <Button className="w-full sm:w-auto" onClick={() => setEditing("new")}>
+            <Plus size={18} />
+            {t.addDish}
+          </Button>
+        }
+      />
+      <div className="mt-5 grid gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <SearchField
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={setSearch}
           placeholder={t.searchDishes}
-          aria-label={t.searchDishes}
-          className="h-11 border border-line bg-paper px-3 text-base"
+          label={t.searchDishes}
+          clearLabel={t.clearSearch}
+          onClear={() => setSearch("")}
         />
-        <select
-          aria-label={t.category}
-          value={categoryId}
-          onChange={(event) => setCategoryId(event.target.value)}
-          className="h-11 border border-line bg-paper px-3 text-base"
-        >
+        <Select aria-label={t.category} value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
           <option value="all">{t.allCategories}</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {localizedName(lang, category.name_ru, category.name_en)}
             </option>
           ))}
-        </select>
-        <select
-          aria-label={t.allStatuses}
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          className="h-11 border border-line bg-paper px-3 text-base"
-        >
+        </Select>
+        <Select aria-label={t.allStatuses} value={status} onChange={(event) => setStatus(event.target.value)}>
           <option value="all">{t.allStatuses}</option>
           <option value="on">{t.statusAvailable}</option>
           <option value="off">{t.statusHidden}</option>
-        </select>
+        </Select>
       </div>
-      <p className="mt-2 text-xs text-muted">{canReorder ? t.reorderHint : t.filterCategoryHint}</p>
-      {menu.isLoading ? <div className="mt-4 h-40 animate-pulse bg-burgundy/10" /> : null}
-      {menu.isError ? <p className="mt-4 text-burgundy">{t.loadError}</p> : null}
-      {!menu.isLoading && items.length === 0 ? <p className="mt-6 text-muted">{t.noDishes}</p> : null}
-      <ul className="mt-4 space-y-2">
-        {items.map(({ item, category }, index) => (
-          <li key={item.id} className="rounded-lg border border-line bg-paper p-4 shadow-[var(--shadow-soft)]">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-medium">{localizedName(lang, item.name_ru, item.name_en)}</p>
-                <p className="text-sm text-muted">{localizedName(lang, category.name_ru, category.name_en)}</p>
-                <p className="mt-1 text-sm tabular-nums text-wine">{priceLines(item.item_price_options, lang).join(" / ")}</p>
-              </div>
-              <button
-                type="button"
-                aria-pressed={item.is_available}
-                onClick={() => availabilityMutation.mutate({ id: item.id, value: !item.is_available })}
-                className={`h-11 shrink-0 px-3 text-xs ${item.is_available ? "bg-burgundy text-ivory" : "border border-line text-muted"}`}
-              >
-                {item.is_available ? t.hide : t.show}
-              </button>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" className="h-11 border border-line px-3 text-sm" onClick={() => setEditing(item)}>
-                {t.editDish}
-              </button>
-              <button type="button" className="h-11 border border-line px-3 text-sm" onClick={() => duplicateMutation.mutate(item)}>
-                {t.duplicate}
-              </button>
-              <button type="button" className="h-11 border border-burgundy px-3 text-sm text-burgundy" onClick={() => setPendingDelete(item)}>
-                {t.delete}
-              </button>
-              <button type="button" className="h-11 px-3 text-sm disabled:opacity-40" disabled={!canReorder || index === 0} onClick={() => move(item.id, -1)}>
-                {t.moveUp}
-              </button>
-              <button
-                type="button"
-                className="h-11 px-3 text-sm disabled:opacity-40"
-                disabled={!canReorder || index === items.length - 1}
-                onClick={() => move(item.id, 1)}
-              >
-                {t.moveDown}
-              </button>
-            </div>
-          </li>
-        ))}
+      <p className="mt-3 text-xs text-muted">{canReorder ? t.reorderHint : t.filterCategoryHint}</p>
+      {menu.isLoading ? (
+        <div className="mt-5 space-y-3">
+          <SkeletonBlock className="h-32" />
+          <SkeletonBlock className="h-32" />
+        </div>
+      ) : null}
+      {menu.isError ? (
+        <div className="mt-5">
+          <EmptyState title={t.loadError} action={<Button onClick={() => void menu.refetch()}>{t.retry}</Button>} />
+        </div>
+      ) : null}
+      {!menu.isLoading && !menu.isError && items.length === 0 ? (
+        <div className="mt-5">
+          <EmptyState
+            icon={<UtensilsCrossed size={20} />}
+            title={t.noDishes}
+            action={
+              <Button onClick={() => setEditing("new")}>
+                <Plus size={18} />
+                {t.addDish}
+              </Button>
+            }
+          />
+        </div>
+      ) : null}
+      <ul className="mt-5 space-y-3">
+        {items.map(({ item, category }, index) => {
+          const lines = priceLines(item.item_price_options, lang);
+          return (
+            <li key={item.id}>
+              <EntityCard>
+                <div className="flex items-start gap-3">
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt=""
+                      className="h-16 w-16 shrink-0 rounded-[16px] object-cover"
+                    />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-semibold leading-snug break-words text-ink">
+                        {localizedName(lang, item.name_ru, item.name_en)}
+                      </p>
+                      <StatusBadge active={item.is_available} activeLabel={t.available} inactiveLabel={t.hidden} />
+                    </div>
+                    <p className="mt-1 text-sm text-muted">{localizedName(lang, category.name_ru, category.name_en)}</p>
+                    <div className="mt-2 space-y-0.5 text-sm font-medium tabular-nums text-burgundy">
+                      {lines.map((line) => (
+                        <p key={line}>{line}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => setEditing(item)}>
+                    {t.edit}
+                  </Button>
+                  <div className="ml-auto flex items-center gap-1.5">
+                    {canReorder ? (
+                      <>
+                        <Button variant="secondary" size="icon" aria-label={t.moveUp} disabled={index === 0} onClick={() => move(item.id, -1)}>
+                          <ChevronUp size={18} />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          aria-label={t.moveDown}
+                          disabled={index === items.length - 1}
+                          onClick={() => move(item.id, 1)}
+                        >
+                          <ChevronDown size={18} />
+                        </Button>
+                      </>
+                    ) : null}
+                    <ActionMenu
+                      label={t.moreActions}
+                      items={[
+                        {
+                          id: "toggle",
+                          label: item.is_available ? t.hide : t.show,
+                          onSelect: () => availabilityMutation.mutate({ id: item.id, value: !item.is_available }),
+                        },
+                        { id: "duplicate", label: t.duplicate, onSelect: () => duplicateMutation.mutate(item) },
+                        { id: "delete", label: t.delete, tone: "danger", onSelect: () => setPendingDelete(item) },
+                      ]}
+                    />
+                  </div>
+                </div>
+              </EntityCard>
+            </li>
+          );
+        })}
       </ul>
       {editing ? (
         <ItemForm
@@ -191,21 +247,29 @@ export function ItemsPage() {
           }}
         />
       ) : null}
-      <Dialog open={Boolean(pendingDelete)} title={t.confirmDeleteDish} closeLabel={t.close} onClose={() => setPendingDelete(null)}>
-        <p>{pendingDelete ? localizedName(lang, pendingDelete.name_ru, pendingDelete.name_en) : ""}</p>
-        <div className="mt-4 flex gap-2">
-          <button
-            type="button"
-            disabled={deleteMutation.isPending}
-            onClick={() => pendingDelete && deleteMutation.mutate(pendingDelete)}
-            className="h-11 flex-1 bg-burgundy text-sm text-ivory disabled:opacity-60"
-          >
-            {t.delete}
-          </button>
-          <button type="button" onClick={() => setPendingDelete(null)} className="h-11 border border-line px-4 text-sm">
-            {t.cancel}
-          </button>
-        </div>
+      <Dialog
+        open={Boolean(pendingDelete)}
+        title={t.confirmDeleteDish}
+        closeLabel={t.close}
+        onClose={() => setPendingDelete(null)}
+        footer={
+          <DialogActions>
+            <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setPendingDelete(null)}>
+              {t.cancel}
+            </Button>
+            <Button
+              className="w-full sm:w-auto"
+              loading={deleteMutation.isPending}
+              onClick={() => pendingDelete && deleteMutation.mutate(pendingDelete)}
+            >
+              {t.delete}
+            </Button>
+          </DialogActions>
+        }
+      >
+        <p className="font-medium text-ink">
+          {pendingDelete ? localizedName(lang, pendingDelete.name_ru, pendingDelete.name_en) : ""}
+        </p>
       </Dialog>
     </div>
   );

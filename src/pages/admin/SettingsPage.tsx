@@ -1,8 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ImagePlus } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useToast } from "../../components/toast-context";
-import { removeImage, saveSettings } from "../../features/admin/api";
+import { AdminPageHeader, Button, buttonClass, Field, FormSection, TextArea, TextInput } from "../../components/ui";
+import { fetchAdminMenu, removeImage, saveSettings } from "../../features/admin/api";
 import { fetchSettings } from "../../features/menu/api";
+import { adminDishPhoto } from "../../features/menu/photos";
+import type { MenuItem } from "../../types/menu";
+import { fetchQrBoard } from "../../features/qr/api";
 import { useLanguage } from "../../i18n/language";
 import { supabase } from "../../lib/supabase";
 import type { SettingsDraft } from "../../types/menu";
@@ -14,6 +20,8 @@ export function SettingsPage() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+  const menu = useQuery({ queryKey: ["admin-menu"], queryFn: fetchAdminMenu });
+  const qr = useQuery({ queryKey: ["qr-board"], queryFn: fetchQrBoard });
   const [draft, setDraft] = useState<SettingsDraft | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
@@ -85,76 +93,118 @@ export function SettingsPage() {
     saveMutation.mutate(draft);
   }
 
-  if (settings.isLoading || !draft) return <div className="h-40 animate-pulse bg-burgundy/10" />;
+  if (settings.isLoading || !draft) return <div className="h-40 animate-pulse rounded-[24px] bg-paper" />;
   if (settings.isError) return <p className="text-burgundy">{t.loadError}</p>;
 
   return (
-    <div className="max-w-xl">
-      <h1 className="font-serif text-4xl text-wine">{t.settings}</h1>
+    <div className="max-w-2xl">
+      <AdminPageHeader title={t.settings} description={t.manageSettings} />
       <div className="mt-6 space-y-4">
-        <Field label={t.restaurantName} value={draft.restaurant_name} onChange={(value) => setDraft({ ...draft, restaurant_name: value })} />
-        <Field label={`${t.subtitle} (${t.optional})`} value={draft.subtitle} onChange={(value) => setDraft({ ...draft, subtitle: value })} />
-        <div>
-          <p className="text-sm text-muted">{t.logo}</p>
-          {draft.logo_url ? <img src={draft.logo_url} alt="" className="mt-2 h-16 w-auto" /> : null}
-          <div className="mt-2 flex flex-wrap gap-2">
-            <label className="inline-flex h-11 cursor-pointer items-center bg-wine px-4 text-sm text-ivory">
-              {draft.logo_url ? t.changeImage : t.upload}
-              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => void onFile(event.target.files?.[0])} />
-            </label>
+        <FormSection title={t.sectionAbout}>
+          <Field label={t.restaurantName}>
+            <TextInput value={draft.restaurant_name} onChange={(event) => setDraft({ ...draft, restaurant_name: event.target.value })} />
+          </Field>
+          <Field label={t.subtitle} hint={t.optional}>
+            <TextInput value={draft.subtitle} onChange={(event) => setDraft({ ...draft, subtitle: event.target.value })} />
+          </Field>
+          <div>
+            <p className="text-sm font-medium text-ink">{t.logo}</p>
             {draft.logo_url ? (
-              <button
-                type="button"
-                className="h-11 border border-line px-4 text-sm"
-                onClick={() => {
-                  void removeImage(draft.logo_url, "branding");
-                  setDraft({ ...draft, logo_url: null });
-                }}
-              >
-                {t.removeImage}
-              </button>
+              <img src={draft.logo_url} alt="" className="mt-3 h-16 w-auto rounded-[12px] bg-paper object-contain" />
+            ) : (
+              <div className="mt-3 grid h-20 place-items-center rounded-[16px] border border-dashed border-line bg-paper text-muted">
+                <ImagePlus size={20} />
+              </div>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <label className={buttonClass("secondary", "sm", "cursor-pointer")}>
+                {draft.logo_url ? t.changeImage : t.upload}
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => void onFile(event.target.files?.[0])} />
+              </label>
+              {draft.logo_url ? (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    void removeImage(draft.logo_url, "branding");
+                    setDraft({ ...draft, logo_url: null });
+                  }}
+                >
+                  {t.removeImage}
+                </Button>
+              ) : null}
+            </div>
+            {progress !== null ? (
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
+                <div className="h-full rounded-full bg-burgundy" style={{ width: `${Math.round(progress * 100)}%` }} />
+              </div>
             ) : null}
           </div>
-          {progress !== null ? (
-            <div className="mt-2 h-1.5 bg-line" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
-              <div className="h-full bg-burgundy" style={{ width: `${Math.round(progress * 100)}%` }} />
-            </div>
-          ) : null}
-        </div>
-        <Field label={`${t.phone} (${t.optional})`} value={draft.phone} onChange={(value) => setDraft({ ...draft, phone: value })} />
-        <Area label={`${t.addressRu} (${t.optional})`} value={draft.address_ru} onChange={(value) => setDraft({ ...draft, address_ru: value })} />
-        <Area label={`${t.addressEn} (${t.optional})`} value={draft.address_en} onChange={(value) => setDraft({ ...draft, address_en: value })} />
-        <Field label={`${t.instagram} (${t.optional})`} value={draft.instagram_url} onChange={(value) => setDraft({ ...draft, instagram_url: value })} />
-        <Area label={`${t.hoursRu} (${t.optional})`} value={draft.opening_hours_ru} onChange={(value) => setDraft({ ...draft, opening_hours_ru: value })} />
-        <Area label={`${t.hoursEn} (${t.optional})`} value={draft.opening_hours_en} onChange={(value) => setDraft({ ...draft, opening_hours_en: value })} />
+        </FormSection>
+
+        <FormSection title={t.sectionContact}>
+          <Field label={t.phone} hint={t.optional}>
+            <TextInput value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} />
+          </Field>
+          <Field label={t.addressRu} hint={t.optional}>
+            <TextArea rows={3} value={draft.address_ru} onChange={(event) => setDraft({ ...draft, address_ru: event.target.value })} />
+          </Field>
+          <Field label={t.addressEn} hint={t.optional}>
+            <TextArea rows={3} value={draft.address_en} onChange={(event) => setDraft({ ...draft, address_en: event.target.value })} />
+          </Field>
+          <Field label={t.instagram} hint={t.optional}>
+            <TextInput value={draft.instagram_url} onChange={(event) => setDraft({ ...draft, instagram_url: event.target.value })} />
+          </Field>
+        </FormSection>
+
+        <FormSection title={t.sectionHours}>
+          <Field label={t.hoursRu} hint={t.optional}>
+            <TextArea rows={3} value={draft.opening_hours_ru} onChange={(event) => setDraft({ ...draft, opening_hours_ru: event.target.value })} />
+          </Field>
+          <Field label={t.hoursEn} hint={t.optional}>
+            <TextArea rows={3} value={draft.opening_hours_en} onChange={(event) => setDraft({ ...draft, opening_hours_en: event.target.value })} />
+          </Field>
+        </FormSection>
+
+        <FormSection title={t.sectionMenuPrefs}>
+          <p className="text-sm leading-relaxed text-muted">{t.menuPrefsText}</p>
+        </FormSection>
+        <FormSection title={t.sectionQrSettings}>
+          <p className="text-sm leading-relaxed text-muted">
+            {settings.data?.qr_domain_locked && settings.data.qr_domain ? t.qrDomainLocked : t.qrDomainWarning}
+          </p>
+          {settings.data?.qr_domain ? <p className="break-all text-sm font-medium text-ink">{settings.data.qr_domain}</p> : null}
+          {qr.data?.ready && qr.data.overview ? (
+            <p className="text-sm text-ink">
+              {t.qrInstalled}: {qr.data.overview.installed} · {t.qrNotInstalled}: {qr.data.overview.not_installed} · {t.qrScans}: {qr.data.overview.scans}
+            </p>
+          ) : (
+            <p className="text-sm text-muted">{t.qrSetupText}</p>
+          )}
+          <Link to="/admin/qr" className={buttonClass("secondary", "sm")}>{t.qrOpenAdmin}</Link>
+        </FormSection>
+        <FormSection title={t.sectionImageSettings}>
+          <ImageCoverage items={menu.data?.flatMap((category) => category.menu_items) ?? []} />
+          <Link to="/admin/images" className={buttonClass("secondary", "sm")}>{t.imagesOpenAdmin}</Link>
+        </FormSection>
+
         {error ? <p className="text-sm text-burgundy">{error}</p> : null}
-        <button
-          type="button"
-          disabled={saveMutation.isPending || progress !== null}
-          onClick={submit}
-          className="h-11 bg-burgundy px-5 text-sm text-ivory disabled:opacity-60"
-        >
+        <Button className="w-full sm:w-auto" loading={saveMutation.isPending} disabled={progress !== null} onClick={submit}>
           {saveMutation.isPending ? t.saving : t.save}
-        </button>
+        </Button>
       </div>
     </div>
   );
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function ImageCoverage({ items }: { items: MenuItem[] }) {
+  const { t } = useLanguage();
+  const approved = items.filter((item) => adminDishPhoto(item)?.review === "approved").length;
+  const review = items.filter((item) => adminDishPhoto(item)?.review === "needs_review").length;
+  const missing = Math.max(0, items.length - approved - review);
   return (
-    <label className="block text-sm text-muted">
-      {label}
-      <input value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-11 w-full border border-line bg-paper px-3 text-base text-ink" />
-    </label>
-  );
-}
-
-function Area({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="block text-sm text-muted">
-      {label}
-      <textarea value={value} rows={3} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full border border-line bg-paper px-3 py-2 text-base text-ink" />
-    </label>
+    <p className="text-sm text-ink">
+      {t.imageWith}: {approved} · {t.imageMissing}: {missing} · {t.imageReview}: {review}
+    </p>
   );
 }

@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import { useLanguage } from "./i18n/language";
 import { MenuPage } from "./pages/MenuPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { TableLinkPage } from "./pages/TableLinkPage";
 
 const AdminApp = lazy(() => import("./pages/admin/AdminApp"));
 
@@ -11,6 +12,7 @@ export default function App() {
     <AppErrorBoundary>
       <Routes>
         <Route path="/" element={<MenuPage />} />
+        <Route path="/t/:token" element={<TableLinkPage />} />
         <Route
           path="/admin/*"
           element={
@@ -51,8 +53,8 @@ function BoundaryFallback() {
   return (
     <div className="grid min-h-dvh place-items-center px-6 text-center">
       <div>
-        <p className="font-serif text-3xl text-wine">{t.loadError}</p>
-        <button type="button" onClick={() => window.location.reload()} className="mt-5 h-11 bg-burgundy px-5 text-sm text-ivory">
+        <p className="font-serif text-3xl text-ink">{t.loadError}</p>
+        <button type="button" onClick={() => window.location.reload()} className="mt-5 inline-flex h-12 items-center rounded-[16px] bg-burgundy px-5 text-sm font-medium text-ivory">
           {t.retry}
         </button>
       </div>

@@ -16,9 +16,25 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronDown, ChevronUp, FolderTree, GripVertical, Plus } from "lucide-react";
 import { useState } from "react";
 import { Dialog } from "../../components/Dialog";
 import { useToast } from "../../components/toast-context";
+import {
+  ActionMenu,
+  AdminPageHeader,
+  Button,
+  DialogActions,
+  EmptyState,
+  EntityCard,
+  Field,
+  FormSection,
+  Select,
+  SkeletonBlock,
+  StatusBadge,
+  Switch,
+  TextInput,
+} from "../../components/ui";
 import {
   deleteCategory,
   fetchAdminMenu,
@@ -118,26 +134,52 @@ export function CategoriesPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-serif text-4xl text-wine">{t.categories}</h1>
-        <button type="button" onClick={() => setEditing("new")} className="h-11 bg-burgundy px-4 text-sm text-ivory">
-          {t.addCategory}
-        </button>
-      </div>
-      <p className="mt-2 text-xs text-muted">{t.reorderHint}</p>
-      {menu.isLoading ? <div className="mt-4 h-40 animate-pulse bg-burgundy/10" /> : null}
-      {menu.isError ? <p className="mt-4 text-burgundy">{t.loadError}</p> : null}
-      {!menu.isLoading && displayRows.length === 0 ? <p className="mt-6 text-muted">{t.noCategories}</p> : null}
+      <AdminPageHeader
+        title={t.categories}
+        description={t.manageCategories}
+        action={
+          <Button className="w-full sm:w-auto" onClick={() => setEditing("new")}>
+            <Plus size={18} />
+            {t.addCategory}
+          </Button>
+        }
+      />
+      <p className="mt-3 text-xs text-muted">{t.reorderHint}</p>
+      {menu.isLoading ? (
+        <div className="mt-5 space-y-3">
+          <SkeletonBlock className="h-32" />
+          <SkeletonBlock className="h-32" />
+          <SkeletonBlock className="h-32" />
+        </div>
+      ) : null}
+      {menu.isError ? (
+        <div className="mt-5">
+          <EmptyState title={t.loadError} text={import.meta.env.DEV ? errorText(menu.error) : undefined} action={<Button onClick={() => void menu.refetch()}>{t.retry}</Button>} />
+        </div>
+      ) : null}
+      {!menu.isLoading && !menu.isError && displayRows.length === 0 ? (
+        <div className="mt-5">
+          <EmptyState
+            icon={<FolderTree size={20} />}
+            title={t.noCategories}
+            action={
+              <Button onClick={() => setEditing("new")}>
+                <Plus size={18} />
+                {t.addCategory}
+              </Button>
+            }
+          />
+        </div>
+      ) : null}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={displayRows.map((category) => category.id)} strategy={verticalListSortingStrategy}>
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-5 space-y-3">
             {displayRows.map((category, index) => (
               <CategoryRow
                 key={category.id}
                 category={category}
                 lang={lang}
                 label={localizedName(lang, category.name_ru, category.name_en)}
-                activeLabel={category.is_active ? t.active : t.inactive}
                 countLabel={`${category.menu_items.length} ${t.dishesCount}`}
                 onToggle={() => activeMutation.mutate({ id: category.id, value: !category.is_active })}
                 onEdit={() => setEditing(category)}
@@ -168,50 +210,54 @@ export function CategoriesPage() {
         />
       ) : null}
 
-      <Dialog open={Boolean(removing)} title={t.confirmDeleteCategory} closeLabel={t.close} onClose={() => setRemoving(null)}>
-        <p>{removing ? localizedName(lang, removing.name_ru, removing.name_en) : ""}</p>
+      <Dialog
+        open={Boolean(removing)}
+        title={t.confirmDeleteCategory}
+        closeLabel={t.close}
+        onClose={() => setRemoving(null)}
+        footer={
+          <DialogActions>
+            <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setRemoving(null)}>
+              {t.cancel}
+            </Button>
+            <Button
+              className="w-full sm:w-auto"
+              loading={deleteMutation.isPending}
+              disabled={Boolean(removing?.menu_items.length) && !reassignTo}
+              onClick={() =>
+                removing &&
+                deleteMutation.mutate({
+                  id: removing.id,
+                  target: removing.menu_items.length ? reassignTo : null,
+                })
+              }
+            >
+              {removing?.menu_items.length ? t.moveAndDelete : t.delete}
+            </Button>
+          </DialogActions>
+        }
+      >
+        <p className="font-medium text-ink">{removing ? localizedName(lang, removing.name_ru, removing.name_en) : ""}</p>
         {removing && removing.menu_items.length > 0 ? (
           <div className="mt-4">
-            <p className="text-sm text-burgundy">{t.deleteBlocked}</p>
+            <p className="text-sm leading-relaxed text-burgundy">{t.deleteBlocked}</p>
             {others.length === 0 ? (
               <p className="mt-2 text-sm text-muted">{t.noOtherCategory}</p>
             ) : (
-              <label className="mt-3 block text-sm text-muted">
-                {t.reassign}
-                <select
-                  value={reassignTo}
-                  onChange={(event) => setReassignTo(event.target.value)}
-                  className="mt-1 h-11 w-full border border-line bg-ivory px-3 text-base text-ink"
-                >
-                  {others.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {localizedName(lang, category.name_ru, category.name_en)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="mt-4">
+                <Field label={t.reassign}>
+                  <Select value={reassignTo} onChange={(event) => setReassignTo(event.target.value)}>
+                    {others.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {localizedName(lang, category.name_ru, category.name_en)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
             )}
           </div>
         ) : null}
-        <div className="mt-4 flex gap-2">
-          <button
-            type="button"
-            disabled={deleteMutation.isPending || (Boolean(removing?.menu_items.length) && !reassignTo)}
-            onClick={() =>
-              removing &&
-              deleteMutation.mutate({
-                id: removing.id,
-                target: removing.menu_items.length ? reassignTo : null,
-              })
-            }
-            className="h-11 flex-1 bg-burgundy text-sm text-ivory disabled:opacity-60"
-          >
-            {removing?.menu_items.length ? t.moveAndDelete : t.delete}
-          </button>
-          <button type="button" onClick={() => setRemoving(null)} className="h-11 border border-line px-4 text-sm">
-            {t.cancel}
-          </button>
-        </div>
       </Dialog>
     </div>
   );
@@ -220,7 +266,6 @@ export function CategoriesPage() {
 function CategoryRow({
   category,
   label,
-  activeLabel,
   countLabel,
   onToggle,
   onEdit,
@@ -234,7 +279,6 @@ function CategoryRow({
   category: Category;
   lang: "ru" | "en";
   label: string;
-  activeLabel: string;
   countLabel: string;
   onToggle: () => void;
   onEdit: () => void;
@@ -246,46 +290,51 @@ function CategoryRow({
 }) {
   const { t } = useLanguage();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: category.id });
+  const alt = lang === "ru" ? category.name_en : category.name_ru;
   return (
-    <li
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`border border-line bg-paper p-3 ${isDragging ? "opacity-70" : ""}`}
-    >
-      <div className="flex items-start gap-2">
-        <button
-          type="button"
-          className="grid h-11 w-11 shrink-0 place-items-center border border-line text-muted"
-          aria-label={t.drag}
-          {...attributes}
-          {...listeners}
-        >
-          ≡
-        </button>
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">{label}</p>
-          <p className="text-sm text-muted">
-            {lang === "ru" ? category.name_en : category.name_ru} · {countLabel}
-          </p>
+    <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
+      <EntityCard dragging={isDragging}>
+        <div className="flex items-start gap-3">
+          <button
+            type="button"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px] border border-line text-muted hover:bg-ivory"
+            aria-label={t.drag}
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical size={18} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-semibold leading-snug text-ink">{label}</p>
+              <StatusBadge active={category.is_active} activeLabel={t.active} inactiveLabel={t.inactive} />
+            </div>
+            <p className="mt-1 text-xs font-medium tracking-[0.12em] text-muted uppercase">
+              {alt} · {countLabel}
+            </p>
+          </div>
         </div>
-        <button type="button" onClick={onToggle} className="h-11 px-3 text-xs text-burgundy">
-          {activeLabel}
-        </button>
-      </div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <button type="button" onClick={onEdit} className="h-11 border border-line px-3 text-sm">
-          {t.editCategory}
-        </button>
-        <button type="button" onClick={onDelete} className="h-11 border border-burgundy px-3 text-sm text-burgundy">
-          {t.delete}
-        </button>
-        <button type="button" onClick={onUp} disabled={disableUp} className="h-11 px-3 text-sm disabled:opacity-40">
-          {t.moveUp}
-        </button>
-        <button type="button" onClick={onDown} disabled={disableDown} className="h-11 px-3 text-sm disabled:opacity-40">
-          {t.moveDown}
-        </button>
-      </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={onEdit}>
+            {t.edit}
+          </Button>
+          <div className="ml-auto flex items-center gap-1.5">
+            <Button variant="secondary" size="icon" aria-label={t.moveUp} disabled={disableUp} onClick={onUp}>
+              <ChevronUp size={18} />
+            </Button>
+            <Button variant="secondary" size="icon" aria-label={t.moveDown} disabled={disableDown} onClick={onDown}>
+              <ChevronDown size={18} />
+            </Button>
+            <ActionMenu
+              label={t.moreActions}
+              items={[
+                { id: "toggle", label: category.is_active ? t.hide : t.show, onSelect: onToggle },
+                { id: "delete", label: t.delete, tone: "danger", onSelect: onDelete },
+              ]}
+            />
+          </div>
+        </div>
+      </EntityCard>
     </li>
   );
 }
@@ -326,29 +375,35 @@ function CategoryDialog({
   }
 
   return (
-    <Dialog open title={category ? t.editCategory : t.addCategory} closeLabel={t.close} onClose={onClose}>
-      <div className="space-y-4">
-        <label className="block text-sm text-muted">
-          {t.nameRu}
-          <input value={nameRu} onChange={(event) => setNameRu(event.target.value)} className="mt-1 h-11 w-full border border-line bg-ivory px-3 text-base" />
-        </label>
-        <label className="block text-sm text-muted">
-          {t.nameEn}
-          <input value={nameEn} onChange={(event) => setNameEn(event.target.value)} className="mt-1 h-11 w-full border border-line bg-ivory px-3 text-base" />
-        </label>
-        <label className="flex min-h-11 items-center gap-3 text-sm">
-          <input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} />
-          {t.active}
-        </label>
-        {error ? <p className="text-sm text-burgundy">{error}</p> : null}
-        <div className="flex gap-2">
-          <button type="button" disabled={saving} onClick={submit} className="h-11 flex-1 bg-burgundy text-sm text-ivory disabled:opacity-60">
-            {saving ? t.saving : t.save}
-          </button>
-          <button type="button" onClick={onClose} className="h-11 border border-line px-4 text-sm">
+    <Dialog
+      open
+      title={category ? t.editCategory : t.addCategory}
+      closeLabel={t.close}
+      onClose={onClose}
+      footer={
+        <DialogActions>
+          <Button variant="secondary" className="w-full sm:w-auto" onClick={onClose}>
             {t.cancel}
-          </button>
-        </div>
+          </Button>
+          <Button className="w-full sm:w-auto" loading={saving} onClick={submit}>
+            {saving ? t.saving : t.save}
+          </Button>
+        </DialogActions>
+      }
+    >
+      <div className="space-y-4">
+        <FormSection title={t.sectionBasics}>
+          <Field label={t.nameRu}>
+            <TextInput value={nameRu} onChange={(event) => setNameRu(event.target.value)} />
+          </Field>
+          <Field label={t.nameEn}>
+            <TextInput value={nameEn} onChange={(event) => setNameEn(event.target.value)} />
+          </Field>
+        </FormSection>
+        <FormSection title={t.sectionVisibility}>
+          <Switch checked={active} onChange={setActive} label={t.active} />
+        </FormSection>
+        {error ? <p className="text-sm text-burgundy">{error}</p> : null}
       </div>
     </Dialog>
   );
