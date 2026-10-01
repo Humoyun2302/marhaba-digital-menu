@@ -147,20 +147,6 @@ export function ItemDetail({ item, categoryName, onClose }: ItemDetailProps) {
             {serving ? <p className="mt-2 text-sm text-muted">{t.weight}: {serving}</p> : null}
           </div>
           {description ? <p className="mt-5 text-base leading-relaxed text-ink">{description}</p> : null}
-          {photo?.attribution || photo?.license ? (
-            <p className="mt-8 text-[11px] leading-relaxed text-muted">
-              {t.photoCredit}: {photo.attribution || t.bundledNote}
-              {photo.license ? ` · ${photo.license}` : ""}
-              {photo.sourceUrl ? (
-                <>
-                  {" · "}
-                  <a href={photo.sourceUrl} target="_blank" rel="noreferrer" className="underline underline-offset-2">
-                    {t.photoSource}
-                  </a>
-                </>
-              ) : null}
-            </p>
-          ) : null}
         </div>
       </div>
     </div>,
