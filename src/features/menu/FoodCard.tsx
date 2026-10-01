@@ -17,7 +17,7 @@ export function FoodCard({ item, onOpen }: { item: MenuItem; onOpen: (item: Menu
         type="button"
         onClick={() => onOpen(item)}
         aria-haspopup="dialog"
-        className="flex h-full w-full flex-col overflow-hidden rounded-[22px] border border-[#e7ddd0] bg-paper text-left shadow-[0_10px_28px_rgba(77,17,24,0.06)] transition md:hover:-translate-y-0.5"
+        className="flex h-full w-full flex-col overflow-hidden rounded-[22px] border border-[#e7ddd0] bg-paper text-left shadow-[0_10px_28px_rgba(77,17,24,0.06)]"
       >
         <span className="relative block aspect-[4/3] overflow-hidden bg-[#f3eadf]">
           {photo ? (

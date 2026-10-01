@@ -20,7 +20,7 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   color-scheme: light;
 }
 
@@ -64,16 +64,7 @@ a,
 input,
 select,
 textarea {
-  transition:
-    background-color 180ms ease,
-    color 180ms ease,
-    border-color 180ms ease,
-    transform 150ms ease,
-    box-shadow 180ms ease;
-}
-
-button:active:not(:disabled) {
-  transform: scale(0.985);
+  transition: none;
 }
 
 .menu-section {
@@ -92,22 +83,6 @@ button:active:not(:disabled) {
   background:
     radial-gradient(circle at 50% 42%, rgba(198, 161, 91, 0.34), transparent 46%),
     linear-gradient(180deg, #f8f3ea, #efe2d0);
-}
-
-.sheet-in {
-  animation: sheet-up 220ms ease;
-}
-
-@keyframes sheet-up {
-  from {
-    transform: translateY(16px);
-    opacity: 0.72;
-  }
-
-  to {
-    transform: none;
-    opacity: 1;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

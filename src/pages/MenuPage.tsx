@@ -67,7 +67,7 @@ export function MenuPage() {
   function selectCategory(id: string) {
     setActiveId(id);
     lockSpy.current = true;
-    document.getElementById(`category-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById(`category-${id}`)?.scrollIntoView({ block: "start" });
     window.setTimeout(() => {
       lockSpy.current = false;
     }, 800);

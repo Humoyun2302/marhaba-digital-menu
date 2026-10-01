@@ -98,7 +98,7 @@ export function ItemDetail({ item, categoryName, onClose }: ItemDetailProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="sheet-in relative flex h-[92dvh] max-h-[100dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-ivory shadow-[0_24px_70px_rgba(28,25,23,0.22)] md:h-auto md:max-h-[min(88dvh,820px)] md:max-w-5xl md:flex-row md:rounded-[28px] md:bg-paper"
+        className="relative flex h-[92dvh] max-h-[100dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-ivory shadow-[0_24px_70px_rgba(28,25,23,0.22)] md:h-auto md:max-h-[min(88dvh,820px)] md:max-w-5xl md:flex-row md:rounded-[28px] md:bg-paper"
       >
         <div className={`relative shrink-0 overflow-hidden ${photo ? "h-[44%] min-h-52 md:h-auto md:min-h-[520px] md:w-[48%]" : "h-24 md:h-auto md:w-[30%]"}`}>
           {photo ? (
