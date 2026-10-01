@@ -4,7 +4,7 @@ import { useToast } from "../../components/toast-context";
 import { AdminPageHeader, Button, buttonClass, EmptyState, SearchField, Select } from "../../components/ui";
 import { fetchAdminMenu, removeImage, updateItemImage } from "../../features/admin/api";
 import { uploadDishPhoto } from "../../features/admin/upload-photo";
-import { adminDishPhoto, bundledPhotos, manualReview } from "../../features/menu/photos";
+import { adminDishPhoto, bundledPhotos } from "../../features/menu/photos";
 import { useLanguage } from "../../i18n/language";
 import { supabase } from "../../lib/supabase";
 import type { MenuItem } from "../../types/menu";
@@ -140,18 +140,6 @@ export function ImagesPage() {
         <MiniStat label={t.imageMissing} value={missing} />
         <MiniStat label={t.imageReview} value={review} />
       </div>
-      {manualReview.length > 0 ? (
-        <section className="mt-4 rounded-[24px] border border-line bg-paper p-4 shadow-[var(--shadow-soft)] sm:p-5">
-          <h2 className="font-serif text-2xl text-ink">{t.reviewReason}</h2>
-          <ul className="mt-3 space-y-2 text-sm text-muted">
-            {manualReview.map((note) => {
-              const item = allItems.find((entry) => entry.id === note.id);
-              const name = item ? localizedName(lang, item.name_ru, item.name_en) : note.id;
-              return <li key={note.id}><span className="font-medium text-ink">{name}.</span> {lang === "ru" ? note.reasonRu : note.reasonEn}</li>;
-            })}
-          </ul>
-        </section>
-      ) : null}
       <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_14rem]">
         <SearchField value={search} onChange={setSearch} placeholder={t.searchDishes} label={t.searchDishes} clearLabel={t.clearSearch} onClear={() => setSearch("")} />
         <Select aria-label={t.allPhotos} value={filter} onChange={(event) => setFilter(event.target.value)}>
