@@ -44,11 +44,14 @@ In the Supabase **SQL Editor**, run these files in order:
 1. `supabase/migrations/20260930120000_init.sql`
 2. `supabase/migrations/20260930230000_admin_activity.sql`
 3. `supabase/migrations/20261001120000_qr_and_images.sql`
-4. `supabase/seed.sql`
+4. `supabase/migrations/20261001193000_restaurant_orders.sql`
+5. `supabase/seed.sql`
 
 The first migration creates tables, updated-at triggers, Row Level Security, and the `menu-images` and `branding` storage buckets.
 
 `20261001120000_qr_and_images.sql` adds optional serving and photograph fields, then creates exactly 120 permanent table QR codes. Running it again does not replace existing tokens, table numbers, or codes. There is no regenerate action in the admin panel. Before printing, set and lock the canonical domain on the QR page. Print files made before that lock are marked “Not for print”.
+
+`20261001193000_restaurant_orders.sql` adds table ordering. It does not change existing QR tokens. Telegram setup is in `TELEGRAM_SETUP.md`.
 
 Dish photographs that could be matched confidently are stored in `public/menu-photos` under licenses that allow this use, with credit in the dish details. Uncertain and branded items stay without a photo and are listed in Admin → Photos. An administrator can replace any photo; that upload goes to the Supabase `menu-images` bucket. Copying the whole set into Storage from the command line also needs `SUPABASE_SERVICE_ROLE_KEY`, which must never be added to the frontend.
 

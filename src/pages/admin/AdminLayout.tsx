@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Ellipsis, FolderTree, ImageIcon, LayoutDashboard, LogOut, QrCode, Settings, UtensilsCrossed } from "lucide-react";
+import { ClipboardList, Ellipsis, FolderTree, ImageIcon, LayoutDashboard, LayoutGrid, LogOut, QrCode, Settings, UtensilsCrossed } from "lucide-react";
 import { NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 import { MobileBottomNav } from "../../components/MobileBottomNav";
 import { Button } from "../../components/ui";
@@ -10,6 +10,8 @@ import { supabase } from "../../lib/supabase";
 
 const links = [
   { to: "/admin", end: true, key: "dashboard", icon: LayoutDashboard },
+  { to: "/admin/orders", end: false, key: "orders", icon: ClipboardList },
+  { to: "/admin/tables", end: false, key: "tables", icon: LayoutGrid },
   { to: "/admin/items", end: false, key: "dishes", icon: UtensilsCrossed },
   { to: "/admin/categories", end: false, key: "categories", icon: FolderTree },
   { to: "/admin/qr", end: false, key: "qr", icon: QrCode },
@@ -18,6 +20,8 @@ const links = [
 ] as const;
 
 const moreLinks = [
+  { to: "/admin/tables", end: false, key: "tables", icon: LayoutGrid },
+  { to: "/admin/qr", end: false, key: "qr", icon: QrCode },
   { to: "/admin/categories", end: false, key: "categories", icon: FolderTree },
   { to: "/admin/images", end: false, key: "images", icon: ImageIcon },
   { to: "/admin/settings", end: false, key: "settings", icon: Settings },
@@ -68,8 +72,8 @@ export function AdminLayout() {
   const moreActive = moreLinks.some((link) => (link.end ? location.pathname === link.to : location.pathname.startsWith(link.to)));
   const mobileItems = [
     { to: "/admin", end: true, label: t.dashboard, icon: LayoutDashboard },
+    { to: "/admin/orders", end: false, label: t.orders, icon: ClipboardList },
     { to: "/admin/items", end: false, label: t.dishes, icon: UtensilsCrossed },
-    { to: "/admin/qr", end: false, label: t.qr, icon: QrCode },
     {
       label: t.moreMenu,
       icon: Ellipsis,

@@ -8,8 +8,10 @@ import { CategoriesPage } from "./CategoriesPage";
 import { DashboardPage } from "./DashboardPage";
 import { ImagesPage } from "./ImagesPage";
 import { ItemsPage } from "./ItemsPage";
+import { OrdersPage } from "./OrdersPage";
 import { QrPage } from "./QrPage";
 import { SettingsPage } from "./SettingsPage";
+import { TablesPage } from "./TablesPage";
 
 export default function AdminApp() {
   useEffect(() => {
@@ -31,6 +33,8 @@ export default function AdminApp() {
         <Route path="login" element={<AdminLoginPage />} />
         <Route element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="orders" element={<OrdersPage />} />
+          <Route path="tables" element={<TablesPage />} />
           <Route path="items" element={<ItemsPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="qr" element={<QrPage />} />

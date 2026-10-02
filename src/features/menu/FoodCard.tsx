@@ -1,23 +1,26 @@
 import { useLanguage } from "../../i18n/language";
 import type { MenuItem } from "../../types/menu";
 import { localizedName, publicPriceLines } from "../../utils/format";
+import { useCart } from "../orders/cart-context";
 import { resolveDishPhoto } from "./photos";
 
 export function FoodCard({ item, onOpen }: { item: MenuItem; onOpen: (item: MenuItem) => void }) {
   const { lang, t } = useLanguage();
+  const cart = useCart();
   const name = localizedName(lang, item.name_ru, item.name_en);
   const description = localizedName(lang, item.description_ru, item.description_en);
   const serving = localizedName(lang, item.serving_ru, item.serving_en);
   const lines = publicPriceLines(item.item_price_options, lang);
   const photo = resolveDishPhoto(item);
+  const onlyOption = item.item_price_options.length === 1 ? item.item_price_options[0] : null;
 
   return (
-    <article className="h-full">
+    <article className="flex h-full flex-col overflow-hidden rounded-[22px] border border-[#e7ddd0] bg-paper shadow-[0_10px_28px_rgba(77,17,24,0.06)]">
       <button
         type="button"
         onClick={() => onOpen(item)}
         aria-haspopup="dialog"
-        className="flex h-full w-full flex-col overflow-hidden rounded-[22px] border border-[#e7ddd0] bg-paper text-left shadow-[0_10px_28px_rgba(77,17,24,0.06)]"
+        className="flex min-h-0 w-full flex-1 flex-col text-left"
       >
         <span className="relative block aspect-[4/3] overflow-hidden bg-[#f3eadf]">
           {photo ? (
@@ -37,7 +40,7 @@ export function FoodCard({ item, onOpen }: { item: MenuItem; onOpen: (item: Menu
             </span>
           )}
         </span>
-        <span className="flex min-w-0 flex-1 flex-col px-3 pt-3 pb-3 sm:px-3.5">
+        <span className="flex min-w-0 flex-1 flex-col px-3 pt-3 pb-2 sm:px-3.5">
           {item.is_featured ? (
             <span className="mb-2 inline-flex w-fit rounded-full bg-burgundy px-2 py-1 text-[9px] font-semibold tracking-[0.14em] text-ivory uppercase sm:text-[10px]">
               {t.featured}
@@ -57,12 +60,26 @@ export function FoodCard({ item, onOpen }: { item: MenuItem; onOpen: (item: Menu
               ))}
               {serving ? <span className="text-[11px] leading-snug text-muted sm:text-xs">{serving}</span> : null}
             </span>
-            <span className="mt-2 block text-[10px] font-semibold tracking-[0.16em] text-burgundy uppercase sm:text-[11px]">
-              {t.more}
-            </span>
           </span>
         </span>
       </button>
+      {item.item_price_options.length > 0 ? (
+        <div className="px-3 pb-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (!onlyOption) {
+                onOpen(item);
+                return;
+              }
+              cart.add({ itemId: item.id, optionId: onlyOption.id, quantity: 1, note: "" });
+            }}
+            className="h-10 w-full rounded-full bg-burgundy text-[11px] font-semibold tracking-[0.12em] text-ivory uppercase"
+          >
+            {t.addToCart}
+          </button>
+        </div>
+      ) : null}
     </article>
   );
 }

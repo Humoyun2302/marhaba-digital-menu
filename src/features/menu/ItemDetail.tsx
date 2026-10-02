@@ -1,9 +1,10 @@
-import { X } from "lucide-react";
-import { useEffect, useId, useRef } from "react";
+import { Minus, Plus, X } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../../i18n/language";
 import type { MenuItem } from "../../types/menu";
 import { localizedName, publicPriceLines } from "../../utils/format";
+import { useCart } from "../orders/cart-context";
 import { resolveDishPhoto } from "./photos";
 
 const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -16,11 +17,23 @@ type ItemDetailProps = {
 
 export function ItemDetail({ item, categoryName, onClose }: ItemDetailProps) {
   const { lang, t } = useLanguage();
+  const cart = useCart();
   const titleId = useId();
+  const itemId = item?.id ?? null;
+  const [optionId, setOptionId] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [note, setNote] = useState("");
+  const [draftItemId, setDraftItemId] = useState<string | null>(null);
+  if (itemId !== draftItemId) {
+    setDraftItemId(itemId);
+    const options = item?.item_price_options ?? [];
+    setOptionId(options.length === 1 ? (options[0]?.id ?? null) : null);
+    setQuantity(1);
+    setNote("");
+  }
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const onCloseRef = useRef(onClose);
-  const itemId = item?.id ?? null;
 
   function requestClose() {
     if (window.history.state && typeof window.history.state === "object" && "marhabaDish" in window.history.state) {
@@ -147,6 +160,45 @@ export function ItemDetail({ item, categoryName, onClose }: ItemDetailProps) {
             {serving ? <p className="mt-2 text-sm text-muted">{t.weight}: {serving}</p> : null}
           </div>
           {description ? <p className="mt-5 text-base leading-relaxed text-ink">{description}</p> : null}
+          {item.item_price_options.length > 1 ? (
+            <fieldset className="mt-5 space-y-2">
+              <legend className="text-sm font-medium text-ink">{t.variantRequired}</legend>
+              {item.item_price_options.map((option) => (
+                <label key={option.id} className="flex items-center justify-between gap-3 rounded-[16px] border border-line bg-paper px-3 py-3 text-sm">
+                  <span className="flex items-center gap-2">
+                    <input type="radio" name="variant" checked={optionId === option.id} onChange={() => setOptionId(option.id)} />
+                    {localizedName(lang, option.label_ru, option.label_en) || t.price}
+                  </span>
+                  <span className="font-semibold tabular-nums">{publicPriceLines([option], lang)[0]}</span>
+                </label>
+              ))}
+            </fieldset>
+          ) : null}
+          {item.item_price_options.length > 0 ? (
+            <div className="mt-5">
+              <label className="block text-sm text-muted">
+                {t.itemNote}
+                <input value={note} maxLength={200} onChange={(event) => setNote(event.target.value)} className="mt-1 h-12 w-full rounded-[16px] border border-line bg-paper px-3 text-base text-ink outline-none" />
+              </label>
+              <div className="mt-3 flex items-center gap-3">
+                <button type="button" aria-label={t.decreaseQty} onClick={() => setQuantity((value) => Math.max(1, value - 1))} className="grid h-11 w-11 place-items-center rounded-full border border-line bg-paper"><Minus size={16} /></button>
+                <span className="w-8 text-center font-semibold tabular-nums">{quantity}</span>
+                <button type="button" aria-label={t.increaseQty} onClick={() => setQuantity((value) => Math.min(20, value + 1))} className="grid h-11 w-11 place-items-center rounded-full border border-line bg-paper"><Plus size={16} /></button>
+                <button
+                  type="button"
+                  disabled={!optionId}
+                  onClick={() => {
+                    if (!optionId) return;
+                    cart.add({ itemId: item.id, optionId, quantity, note });
+                    requestClose();
+                  }}
+                  className="ml-auto h-12 rounded-full bg-burgundy px-5 text-sm font-semibold text-ivory disabled:opacity-50"
+                >
+                  {t.addToCart}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>,

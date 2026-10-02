@@ -1,0 +1,7 @@
+project_id = "jwbfthadjyfwxpahmwid"
+
+[functions.telegram-webhook]
+verify_jwt = false
+
+[functions.restaurant-orders]
+verify_jwt = false

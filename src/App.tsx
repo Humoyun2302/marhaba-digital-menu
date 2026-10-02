@@ -1,8 +1,13 @@
 import { Component, lazy, Suspense, type ReactNode } from "react";
 import { Route, Routes } from "react-router-dom";
 import { useLanguage } from "./i18n/language";
+import { CartProvider } from "./features/orders/CartProvider";
+import { VisitProvider } from "./features/orders/VisitProvider";
 import { MenuPage } from "./pages/MenuPage";
+import { MyOrdersPage } from "./pages/MyOrdersPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { CheckoutPage } from "./pages/CheckoutPage";
+import { OrderTrackingPage } from "./pages/OrderTrackingPage";
 import { TableLinkPage } from "./pages/TableLinkPage";
 
 const AdminApp = lazy(() => import("./pages/admin/AdminApp"));
@@ -10,9 +15,14 @@ const AdminApp = lazy(() => import("./pages/admin/AdminApp"));
 export default function App() {
   return (
     <AppErrorBoundary>
+      <VisitProvider>
+      <CartProvider>
       <Routes>
         <Route path="/" element={<MenuPage />} />
         <Route path="/t/:token" element={<TableLinkPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/order/:token" element={<OrderTrackingPage />} />
+        <Route path="/my-orders" element={<MyOrdersPage />} />
         <Route
           path="/admin/*"
           element={
@@ -23,6 +33,8 @@ export default function App() {
         />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </CartProvider>
+      </VisitProvider>
     </AppErrorBoundary>
   );
 }

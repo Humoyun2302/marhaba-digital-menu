@@ -67,6 +67,19 @@ textarea {
   transition: none;
 }
 
+.cart-sheet {
+  animation: cart-rise 180ms ease-out;
+}
+
+@keyframes cart-rise {
+  from {
+    transform: translateY(16px);
+  }
+  to {
+    transform: none;
+  }
+}
+
 .menu-section {
   scroll-margin-top: calc(var(--sticky-offset, 9.5rem) + 0.75rem);
 }
